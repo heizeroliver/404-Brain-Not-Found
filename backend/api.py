@@ -42,6 +42,8 @@ from engine.rules.rulebook import RULEBOOK, WorldRule
 from engine.twin import build_twin
 from engine.voice import synthesize
 from goals_api import router as goals_router
+from customer_api import router as customer_router
+from control_api import router as control_router
 from store import Store
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -50,6 +52,8 @@ log = logging.getLogger("foresight.api")
 app = FastAPI(title="Kate Foresight API", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None)
 store = Store(config.CUSTOMERS_PATH, config.DECISION_LOG_PATH)
 app.include_router(goals_router)  # /me/goals: customer-stated intent (goals_api.py)
+app.include_router(customer_router)  # /me/overview, /me/timeline-v2, /me/advisor-requests (customer_api.py)
+app.include_router(control_router)  # /admin/* control room v2 (control_api.py)
 
 limiter = Limiter(key_func=get_remote_address, default_limits=[config.GLOBAL_RATE_LIMIT])
 app.state.limiter = limiter
@@ -59,7 +63,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[config.FRONTEND_ORIGIN],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
