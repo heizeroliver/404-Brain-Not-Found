@@ -119,13 +119,18 @@ function pager(page, pageSize, total, onPage) {
   return add(nav, prev, h('span', 'num muted', t('c_pager', from, to, total), { 'aria-live': 'polite' }), next);
 }
 function select(label, name, value, options) {
-  const f = h('label', 'field');
+  const f = fieldWrap();
   add(f, h('span', 'label', label));
-  const s = h('select', '', null, { name });
+  const s = h('select', 'field', null, { name });
   s.appendChild(h('option', '', t('c_all'), { value: '' }));
   options.forEach(([v, l]) => { const o = h('option', '', l, { value: v }); if (v === value) o.selected = true; s.appendChild(o); });
   f.appendChild(s);
   return [f, s];
+}
+function fieldWrap() {
+  const f = h('label', 'ctl-field');
+  Object.assign(f.style, { display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '160px' });
+  return f;
 }
 function card(title, ...kids) {
   const c = h('section', 'card stack-3');
@@ -220,7 +225,7 @@ function viewOverview(panel) {
     const byType = (d.moments_by_type || []).map((r) => ({ key: r.key, label: typeLabel(r.key), value: r.value }));
     const byCh = (d.channel_recommendations || []).map((r) => ({ key: r.key, label: chLabel(r.key), value: r.value }));
     add(charts,
-      card(t('c_chart_types'), h('p', 'muted', t('c_chart_types_hint')),
+      card(t('c_chart_types'), h('p', 'muted small', t('c_chart_types_hint')),
         byType.length ? hBars(byType, { label: t('c_chart_types'), unit: '', onSelect: (key) => go('moments', { type: typeof key === 'object' ? key.key : key }) }) : empty()),
       card(t('c_chart_channel'), byCh.length ? distribution(byCh, { label: t('c_chart_channel') }) : empty()));
     const att = h('ul', 'stack-2');
@@ -246,9 +251,9 @@ function viewOverview(panel) {
 function viewMoments(panel, params) {
   const f = { q: get(params, 'q'), type: get(params, 'type'), source: get(params, 'source'), channel: get(params, 'channel'), status: get(params, 'status'), page: Number(get(params, 'page')) || 1 };
   const bar = row();
-  const sf = h('label', 'field');
+  const sf = fieldWrap();
   add(sf, h('span', 'label', t('c_search')));
-  const si = h('input', '', null, { type: 'search', name: 'q', placeholder: t('c_search_ph'), value: f.q });
+  const si = h('input', 'field', null, { type: 'search', name: 'q', placeholder: t('c_search_ph'), value: f.q });
   si.value = f.q;
   sf.appendChild(si);
   const update = (patch) => go('moments', { ...f, ...patch, page: patch.page || 1 });
@@ -401,9 +406,9 @@ function drawRules(slot) {
   const syncJson = () => { jsonArea.value = JSON.stringify(rule, null, 2); jsonMsg.textContent = ''; };
 
   const input = (label, value, onInput, attrs) => {
-    const f = h('label', 'field');
+    const f = fieldWrap();
     add(f, h('span', 'label', label));
-    const i = h('input', '', null, { type: 'text', ...(attrs || {}) });
+    const i = h('input', 'field', null, { type: 'text', ...(attrs || {}) });
     i.value = value ?? '';
     i.addEventListener('input', () => { onInput(i.value); if (details.open) syncJson(); });
     return add(f, i);
@@ -426,8 +431,8 @@ function drawRules(slot) {
     rule.conditions.forEach((c, i) => {
       const r = row(8);
       const mk = (label, opts, val, on) => {
-        const f = h('label', 'field'); add(f, h('span', 'label', label));
-        const s = h('select');
+        const f = fieldWrap(); add(f, h('span', 'label', label));
+        const s = h('select', 'field');
         opts.forEach(([v, l]) => { const o = h('option', '', l, { value: v }); if (v === val) o.selected = true; s.appendChild(o); });
         s.addEventListener('change', () => { on(s.value); if (details.open) syncJson(); });
         return add(f, s);
@@ -526,8 +531,8 @@ function viewAudit(panel, params) {
     const log = d.log || { items: [], total: 0, page: 1 };
     const items = log.items || [];
     const bar = row();
-    const sf = h('label', 'field'); add(sf, h('span', 'label', t('c_search')));
-    const si = h('input', '', null, { type: 'search', name: 'q' }); si.value = f.q; sf.appendChild(si);
+    const sf = fieldWrap(); add(sf, h('span', 'label', t('c_search')));
+    const si = h('input', 'field', null, { type: 'search', name: 'q' }); si.value = f.q; sf.appendChild(si);
     const update = (patch) => go('audit', { ...f, ...patch, page: patch.page || 1 });
     si.addEventListener('keydown', (e) => { if (e.key === 'Enter') update({ q: si.value.trim() }); });
     si.addEventListener('change', () => { if (si.value.trim() !== f.q) update({ q: si.value.trim() }); });
