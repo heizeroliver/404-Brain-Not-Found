@@ -2,6 +2,7 @@
 
   GET  /me/overview?lang=           -> priority moment, others, upcoming, allocation, goals, advisor requests
   GET  /me/timeline2?days=90|365    -> truthful timeline items (kind + date from the rule's own window)
+  GET  /me/money-calendar?lang=&category=  -> personal timeline (source "you") + Belgian calendar (source "belgium")
   POST /me/advisor-requests         -> 201 new / 200 existing open request; 404 if not in the feed; 429 above cap
   GET  /me/advisor-requests         -> the caller's requests
 
@@ -18,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 import auth
 import config
 import requests_store
-from engine import allocation
+from engine import allocation, be_calendar
 from engine.models import Customer, Moment
 
 router = APIRouter()
@@ -316,6 +317,37 @@ def timeline2(customer_id: str = Depends(auth.current_customer_id), lang: Lang =
     later = [i for i in all_items if i["date"] > limit]
     return {"today": today.isoformat(), "days": days, "items": items,
             "next_after_horizon": later[0] if not items and later else None}
+
+
+CalCategory = Literal["tax", "savings", "pension", "insurance", "loan", "home", "car", "income"]
+
+
+@router.get("/me/money-calendar")
+def money_calendar(customer_id: str = Depends(auth.current_customer_id), lang: Lang = LANG_QUERY,
+                   category: CalCategory | None = Query(None)) -> dict[str, Any]:
+    api = _api()
+    customer = api._in_language(api._customer(customer_id), lang)
+    today = config.today()
+    personal = [{
+        "id": f"you_{i['type']}_{i['date']}", "source": "you",
+        "category": be_calendar.personal_category(i["type"]),
+        "date": i["date"], "end": i["end"], "title": i["title"], "what": None, "tip": None,
+        "basis": None, "kind": i["kind"], "type": i["type"], "source_hint": None, "recurrence": None,
+        "for_you": True,
+    } for i in _timeline_items(customer, today, lang, 365)]
+    all_items = personal + be_calendar.calendar(customer, today, lang)
+    all_items.sort(key=lambda x: (x["date"], x["source"] != "you", x["id"]))
+    counts: dict[str, int] = {}
+    for it in all_items:
+        counts[it["category"]] = counts.get(it["category"], 0) + 1
+    items = [it for it in all_items if category is None or it["category"] == category]
+    return {
+        "as_of": today.isoformat(),
+        "items": items,
+        "categories": [{"key": k, "label": be_calendar.CATEGORY_LABELS[k][lang], "count": counts.get(k, 0)}
+                       for k in be_calendar.CATEGORIES],
+        "disclaimer": be_calendar.DISCLAIMER[lang],
+    }
 
 
 class AdvisorRequestBody(BaseModel):
