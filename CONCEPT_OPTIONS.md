@@ -1,16 +1,16 @@
-# Three concepts for the KBC case, pick one by 19:35
+# Four concepts for the KBC case, pick one by 19:35
 
-Same brief, three different answers to "a new way KBC understands, supports and guides its customers". They differ on the axis of personalization:
+Same brief, four different answers to "a new way KBC understands, supports and guides its customers". They differ on the axis of personalization:
 
-| | A. Kate Foresight | B. Kate Autopilot | C. Financial Immune System |
-|---|---|---|---|
-| Axis | **Time**: anticipate what is about to happen | **Action**: delegate money admin within limits | **Protection**: notice trouble early, respond in graded steps |
-| Kate's role | Kate gets a calendar | Kate gets a mandate | Kate gets reflexes |
-| Relationship shift | From reacting to anticipating | From advising to acting on your behalf | From selling to protecting |
-| Hero data | Bank + insurance dates, fiscal calendar | Customer's own instructions, event stream | Anomalies, stress signals, cover gaps |
-| One-line pitch | "A bank that knows what's next, and shows you why." | "Tell Kate what she may do. She does the rest, and asks when unsure." | "A bank-insurer that notices trouble before you do." |
+| | A. Kate Foresight | B. Kate Autopilot | C. Financial Immune System | D. Personal Economist |
+|---|---|---|---|---|
+| Axis | **Time**: anticipate what is about to happen in your life | **Action**: delegate money admin within limits | **Protection**: notice trouble early, respond in graded steps | **World**: when the rules or the markets change, compute what it means for you |
+| Kate's role | Kate gets a calendar | Kate gets a mandate | Kate gets reflexes | Kate reads the Staatsblad so you don't have to |
+| Relationship shift | From reacting to anticipating | From advising to acting on your behalf | From selling to protecting | From generic news to your personal impact |
+| Hero data | Bank + insurance dates, fiscal calendar | Customer's own instructions, event stream | Anomalies, stress signals, cover gaps | A structured rulebook of law, tax, rate and price changes + a digital twin per customer |
+| One-line pitch | "A bank that knows what's next, and shows you why." | "Tell Kate what she may do. She does the rest, and asks when unsure." | "A bank-insurer that notices trouble before you do." | "Belgium changes the rules. KBC tells 2.3 million people what it means for them, overnight." |
 
-Details for A are in `ACTION_PLAN.md` section 6. B and C follow, then the scoring matrix and the 10-minute decision method.
+Details for A are in `ACTION_PLAN.md` section 6. B, C and D follow, then the MECE tree that generated D, the scoring matrix and the 10-minute decision method.
 
 ---
 
@@ -97,6 +97,67 @@ Details for A are in `ACTION_PLAN.md` section 6. B and C follow, then the scorin
 
 ---
 
+## D. Personal Economist: personalization on the world, not only on the person
+
+**One line.** Every customer gets a digital twin: a structured model of their financial life (income, home, mortgage, cars, policies, savings, investments, family, region). Every night the twin is re-run against the changing Belgian and European rulebook and market conditions. When something changes in the world, each affected customer gets a quantified "what this means for you, and what to do" at the moment it matters: announcement, vote, entry into force, deadline.
+
+**Where it comes from (the MECE cell nobody covers).** Ask "where does a customer's need come from?" and there are exactly four mutually exclusive, collectively exhaustive origins:
+
+1. **What the customer decides** (intentions, instructions) → B.
+2. **What happens in the customer's life** (predictable transitions and dates) → A.
+3. **What happens to the customer** (fraud, income shock, damage) → C.
+4. **What happens around the customer** (laws, taxes, interest rates, prices, indexes, climate rules, KBC's own terms) → nobody. That is D.
+
+Every bank personalizes on the person. Almost nobody personalizes on the world, even though the world is what changed for all 2.3M customers at once in 2026: the 10% capital-gains tax, the pension bonus/malus, the 24-month unemployment cap, company-car deductibility, the insurance tax to 9.6%, hospitalisation index, the renovation obligation relaxed to 6 years, the VerbouwPremie cuts, the Flemish inheritance-tax cuts, the June index jump, Peppol, VoP, Wero, and at EU level the AI Act, CCD2 in November, PSD3, the identity wallet, the digital euro. Today a customer learns about these from newspapers and Test Aankoop, generically. KBC Economics is one of the most cited research teams in Belgium, but it writes for everyone. D makes it write for one person, 2.3 million times.
+
+**The twist.** The trigger is not a customer signal but a rule object. One rule change, one overnight batch, millions of personal, quantified, explainable messages. This is KBC's fifth question ("meaningful impact for millions of customers at the same time") answered literally, and it is counter-intuitive enough to score on originality.
+
+**Examples (all real 2026 changes).**
+- "The capital-gains tax starts on 1 January. Based on your Bolero portfolio, your 2026 gains are on track for ~€6,400: under the €10,000 exemption. Nothing to do, unless you sell the ETF you bought in 2019 (photo value applies)."
+- "Your company car is a diesel ordered in 2024: 50% deductible this year, 25% next year, 0% in 2028. Your employer's fleet policy will likely change at your lease end (Jan 2027). Here is what an EV lease does to your net pay."
+- "Flanders relaxed the renovation obligation: you now have until March 2031, not 2030. Your renovation loan can be spread over one more year."
+- "The June index jump raises your pension by 2% from September: +€38/month. Your fidelity premium on the savings account is due on 14 October, so wait until then to move money."
+- "From 1 April the insurance tax is 9.6%: +€11 on your car policy. No action, we already applied it."
+- "CCD2 applies from 20 November: if your income drops, you have a legal right to a payment plan before any enforcement. We have activated it on your file automatically."
+- Self-employed: "Peppol e-invoicing is mandatory since January; 3 of your 12 suppliers still send PDFs. Here is the switch."
+
+**Why it fits KBC.** Cross-product by construction (tax, pension, insurance, mortgage, investing, payments). Bank + insurance data make the twin complete enough to quantify. It builds on KBC Economics (a brand asset) and on Kate's roadmap ("housing, mobility, energy" are exactly where rules change most). It moves bank-insurance and investment KPIs honestly: the action is often a KBC product (Mijn VerbouwLening, pension saving, term account, EV lease insurance). Region and language aware by necessity (Flemish vs Walloon vs Brussels rules).
+
+**Why it is not a feature.** A rulebook + twin + impact engine is a layer: every new law, budget deal, ECB decision or KBC tariff change is one more rule object; the engine, the explanations, the channels and the control room are shared. It also portable to the group: swap the Belgian rulebook for the Czech one.
+
+**EU design.** Fully deterministic and explainable (SCHUFA / Dun & Bradstreet standard met by design). Information about personal impact, with a human advisor one tap away for anything that is investment or credit advice (MiFID / IDD boundary, GDPR Art. 22, AI Act human oversight). AI disclosure on voice. Decision log. No inference of sensitive data: the twin only uses contract and transaction facts.
+
+**Scale to 2.3M.** The rule is one object; the twin is a row per customer; impact = rule applied to row, in BigQuery, minutes for 2.3M. Affected customers are usually a subset (5–40%). The LLM phrases the structured impact in NL/FR/EN; numbers come from the engine. Arbitration and frequency caps as in A. Delivery on the rule's own calendar: announcement (heads-up), entry into force (what changed), deadline (last call). KPIs: customers reached per rule change, actions taken, advisor conversations created (Kate-leads), products opened, and a new one: "time from Staatsblad to customer".
+
+**Tonight's PoC (3 hours).**
+1. Rulebook: 8 real 2026 changes encoded as structured rules with effective dates, affected-population predicate and impact formula (capital-gains tax, company-car deductibility, insurance tax, renovation obligation, pension top-up ceilings, index jump for pensioners, unemployment cap, Peppol).
+2. Twin: the same synthetic dataset as A (personas + 200 customers) with the fields the rules need.
+3. Impact engine: rule × twin → `{affected, € impact, direction, confidence, evidence[], actions[], timing}`.
+4. UI: "What changed in the world, and what it means for you" feed with Why? and actions; a "Rules on my horizon" timeline; and the control room where a new rule is dropped in and the engine shows in seconds how many of the 200 customers are affected, the total €, and the channel plan.
+5. Narration by Gemini in the customer's language; voice by ElevenLabs.
+6. The demo moment: paste a fresh headline ("Government agrees budget: savings-account exemption replaced by €6,000 investment-income exemption") → Gemini drafts the rule object → engineer approves → engine runs → personalised impacts appear for Lien, Marc and Rita.
+
+**Demo storyline.** Marc (FR): company-car rule + insurance tax, routed to an advisor for the EV lease. Lien: capital-gains tax on her ETFs (nothing to do, explained) and the VerbouwPremie cut before she buys. Rita: index jump + fidelity premium timing, delivered by voice. Control room: the budget-headline → rule → 2.3M story.
+
+**Risks.** "It is a newsletter engine" → answer with quantified per-customer € impact, actions, the twin, and the live rule ingestion in the demo. Rules must be encoded correctly: use only the figures in `ACTION_PLAN.md` section 3 and mark anything else illustrative. Advice boundary: phrase as personal impact plus "talk to an advisor", never "you should sell".
+
+---
+
+## The MECE tree behind the four options
+
+Question: how can KBC understand what a customer needs and act at the right moment, at scale?
+
+- **Where does the need originate?** (mutually exclusive, collectively exhaustive)
+  - Customer's own decisions and instructions → B
+  - Customer's life course: predictable transitions and dates → A
+  - Adverse events hitting the customer → C
+  - Changes in the customer's environment: law, tax, rates, prices, KBC terms → D
+- **How does the bank respond?** inform and explain / recommend / act on behalf / protect and prevent / hand to a human. Each option uses all five, with a different centre of gravity.
+- **Through which channel?** app card / Kate chat / Kate voice / advisor call / letter or branch. Same for all four; the engine chooses.
+- **At which unit?** individual / household / cohort / whole population. A, B, C are individual; D is population-first, individual-second, which is why it scales differently.
+
+Read the tree top-down and the four options are the complete solution space for "origin of need". That is the line for the video: "Tonight we built one cell. The full engine has four."
+
 ## Honourable mentions (one line each, fold into any winner)
 
 - **Glass Bank / Kate's Notebook**: the customer sees and edits the bank's model of them (household, home, car, goals, channel preference) with confidence and evidence; corrections are the strongest signal. Strong trust story, weak demo on its own. Use as the "Why?" and consent layer in A, B or C.
@@ -106,25 +167,27 @@ Details for A are in `ACTION_PLAN.md` section 6. B and C follow, then the scorin
 
 ## Scoring matrix (my estimate, 1–5)
 
-| Criterion (weight) | A. Foresight | B. Autopilot | C. Immune System |
-|---|---|---|---|
-| Originality (30%) | 4: forward-looking calendar is a fresh angle, though "life events" exist | 5: natural-language mandates across bank+insurance; nobody in Belgium ships this | 4: protect-not-sell plus care mode is a strong, rare framing |
-| Technical ability tonight (30%) | 5: deterministic rules, easy to make work end to end | 3: compiler + simulator + limits must all work; more moving parts | 4: detectors and tiers are simple; anomaly score is optional |
-| Fit to the case (30%) | 5: answers all five KBC questions literally, "right moment" is the core | 4: strong on adapt / cross-product / scale, weaker on "understanding signals" | 4: strong on signals and support, weaker on "guides" and on breadth |
-| Security (10%) | 4: standard auth/IDOR story | 5: business-logic limits are a showcase for Aikido | 4: standard, plus hold logic |
-| Demo wow in 3 minutes | 4 | 5 (voice → mandate → money moves → Kate asks) | 4 (the 22:40 fraud call lands emotionally) |
-| Risk the jury says "this exists" | Medium (Kate nudges, Personetics) | Medium (rules/standing orders) | Medium (fraud engine) |
-| Build risk with 4 people in 3.5 h | Low | High | Medium |
+| Criterion (weight) | A. Foresight | B. Autopilot | C. Immune System | D. Personal Economist |
+|---|---|---|---|---|
+| Originality (30%) | 4: forward-looking calendar is fresh, though "life events" exist | 5: natural-language mandates across bank+insurance | 4: protect-not-sell and care mode is a rare framing | 5: personalizing on the world instead of the person; nobody does it |
+| Technical ability tonight (30%) | 5: deterministic rules, easy end to end | 3: compiler + simulator + limits must all work | 4: detectors and tiers are simple | 4: deterministic, but rules must be encoded correctly |
+| Fit to the case (30%) | 5: all five questions, "right moment" is the core | 4: strong on adapt / cross-product / scale, weaker on signals | 4: strong on signals and support, weaker on guiding | 5: question 5 ("millions at the same time") answered literally; cross-product by construction |
+| Security (10%) | 4: standard auth/IDOR story | 5: business-logic limits showcase | 4: standard, plus hold logic | 4: standard |
+| Demo wow in 3 minutes | 4 | 5 (voice → mandate → money moves → Kate asks) | 4 (the 22:40 fraud call) | 5 (headline → rule → 2.3M personal impacts in seconds) |
+| Risk the jury says "this exists" | Medium (Kate nudges, Personetics) | Medium (rules, standing orders) | Medium (fraud engine) | Low |
+| Build risk with 4 people in 3.5 h | Low | High | Medium | Low–medium |
 
-**My ranking for tonight:** A, then C, then B. **My ranking for the final on 20 Oct:** B, then A, then C. B is the biggest idea and the most on-trend, but it is the hardest to make work in three hours, and a mandate demo that half-works reads as unsafe. A is the safest path to the top 32 with a genuinely original angle. C is the most defensible ethically and lands hardest with a KBC jury that lives "role in society".
+**My ranking for tonight:** D and A are co-leaders. D is more original and has the better 3-minute demo; A is the most literal answer to "right moment". C is the most defensible ethically and lands hardest with a KBC jury that lives "role in society". B is the biggest idea and the most on-trend, but a mandate demo that half-works reads as unsafe. **For the final on 20 Oct:** B, then D, then A, then C.
 
-**Combinations that work later:** A + B (moments become one-tap mandates), A + C (care mode inside the moments engine), B + C (a guardian mandate is an immune response). Whatever you pick tonight, say in the video which of the others is the next layer.
+**The natural merge:** A and D are the same engine with two calendars, yours and the world's. If the team is split between them, build D's rulebook as one more trigger source inside A's moment engine and pitch "Kate Foresight: two calendars". That costs almost nothing extra because they share the dataset, the arbitration, the narration and the control room.
+
+**Other combinations:** A + B (moments become one-tap mandates), A + C (care mode inside the moments engine), B + C (a guardian mandate is an immune response). Whatever you pick tonight, say in the video which of the others is the next layer.
 
 ---
 
 ## How to decide in 10 minutes
 
-1. Each person reads the three one-liners and the matrix (3 min).
-2. Each person scores A, B, C from 1–5 on two questions only: "Can we demo this working by 21:45?" and "Would a KBC jury remember it tomorrow?" (2 min).
+1. Each person reads the four one-liners and the matrix (3 min).
+2. Each person scores A, B, C, D from 1–5 on two questions only: "Can we demo this working by 21:45?" and "Would a KBC jury remember it tomorrow?" (2 min).
 3. Add up. If two are tied, take the one with the lower build risk. Decide, write the name on the whiteboard, do not revisit (5 min).
 4. Whoever argued hardest for a losing idea writes the "next layer" line for the video.

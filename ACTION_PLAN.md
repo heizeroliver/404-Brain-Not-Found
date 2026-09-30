@@ -180,7 +180,7 @@ Each moment card shows: the message (persona's language), the confidence, the "W
 
 ### 6.6 Alternatives
 
-Two other full concepts (B. Kate Autopilot: mandate-based delegated banking; C. Financial Immune System: protective personalization) are in `CONCEPT_OPTIONS.md`, with a scoring matrix and a 10-minute decision method. Pick one by 19:35 and do not revisit.
+Three other full concepts (B. Kate Autopilot: mandate-based delegated banking; C. Financial Immune System: protective personalization; D. Personal Economist: personalization on rule and market changes) are in `CONCEPT_OPTIONS.md`, with a scoring matrix and a 10-minute decision method. Pick one by 19:35 and do not revisit.
 
 ---
 
