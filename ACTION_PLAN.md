@@ -2,6 +2,8 @@
 
 **The clock.** First round is tonight, 30 Sep 2026, 18:00–23:00, in all 7 cities at once (700+ builders). The top 32 teams go to the grand final on 20 Oct in Ghent (full day, the day before the Tectonic conference). €10,000 for the winner. Tonight's job is *not* to win the hackathon. It is to be unmistakably top-32 material: one sharp idea, one working demo, one clean sub-3-minute video, Aikido done.
 
+**Submissions close at 23:00 GMT+2 sharp** (Builderbase countdown). Four required items: video link (<3 min), description, GitHub repository link (public), Aikido screenshots.
+
 **Hard deadlines tonight (set alarms now):**
 
 | Time  | What |
@@ -238,7 +240,8 @@ Four people, four lanes. Nobody works alone on the demo path for more than 45 mi
 
 **Now–19:20 Lock-in (all four)**
 - Read sections 1, 3 and 6 aloud (5 min). Decide: Foresight yes/no. Name the project.
-- D: Aikido account via the hackathon link (Continue with GitHub), connect the repo; ElevenLabs and Cursor coupons via the Discord `#coupon-codes` channels; GCP credentials via the Builderbase link; all keys in a git-ignored `.env`.
+- D, first thing: on Builderbase the **GitHub Repository Link currently points to the tectonicconf.eu page, not to this repo**. Replace it with `https://github.com/heizeroliver/404-Brain-Not-Found` and make sure the repo is public.
+- D: Aikido account via the hackathon link (Continue with GitHub), connect the repo; ElevenLabs and Cursor coupons via the Discord `#coupon-codes` channels; the Google Cloud credit is a **team code** under Builderbase → Resources → Codes (redeem it on the Google Cloud credits page with the registration email; credentials valid one week; never commit the code or the credentials); all keys in a git-ignored `.env`.
 - A: repo skeleton (backend/frontend folders, `.gitignore`, `.env.example`, `requirements.txt`).
 - B: frontend skeleton with phone frame and one fake card.
 - C: the three persona storylines as JSON (which moments, which dates, which language) so A and B build against the same story.
