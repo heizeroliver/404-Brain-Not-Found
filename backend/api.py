@@ -40,6 +40,7 @@ from engine.rules import LIFE_CALENDAR_RULES, run_rules
 from engine.rules.rulebook import RULEBOOK, WorldRule
 from engine.twin import build_twin
 from engine.voice import synthesize
+from goals_api import router as goals_router
 from store import Store
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -47,6 +48,7 @@ log = logging.getLogger("foresight.api")
 
 app = FastAPI(title="Kate Foresight API", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None)
 store = Store(config.CUSTOMERS_PATH, config.DECISION_LOG_PATH)
+app.include_router(goals_router)  # /me/goals: customer-stated intent (goals_api.py)
 
 limiter = Limiter(key_func=get_remote_address, default_limits=[config.GLOBAL_RATE_LIMIT])
 app.state.limiter = limiter
@@ -56,7 +58,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[config.FRONTEND_ORIGIN],
     allow_credentials=False,
-    allow_methods=["GET", "POST", "PUT"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["Authorization", "Content-Type"],
 )
 
@@ -185,8 +187,8 @@ LANG_QUERY = Query("nl", description="App language: Dutch (default), English or 
 
 
 def _in_language(customer: Customer, lang: AppLanguage) -> Customer:
-    """The app speaks NL, EN or FR; the customer's record is not changed."""
-    return customer.model_copy(update={"language": lang})
+    """The app speaks NL, EN or FR; the customer's record is not changed. Stated goals are attached."""
+    return store.with_goals(customer).model_copy(update={"language": lang})
 
 
 def _customer(customer_id: str) -> Customer:
@@ -353,7 +355,7 @@ def admin_overview(_: auth.Principal = Depends(auth.require_admin)) -> dict[str,
                "level": r.level, "affected": 0, "total_impact": 0.0}
         for r in RULEBOOK.rules()}
     for customer in store.customers.values():
-        result = _feed(customer, today, record=False)
+        result = _feed(store.with_goals(customer), today, record=False)
         if result.care_mode:
             care_mode_ids.append(customer.id)
         if result.ranked:
@@ -390,6 +392,7 @@ def admin_overview(_: auth.Principal = Depends(auth.require_admin)) -> dict[str,
             "other_banks_on": sum(1 for c in consents if c.use_other_banks),
         },
         "feedback_counts": dict(feedback_counts),
+        "goals_total": store.goals_count(),
         "world_rules": list(world.values()),
         "decision_log_tail": store.decision_log_tail(30),
         "narration": gemini_backend() or "template",
