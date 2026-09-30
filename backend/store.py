@@ -12,9 +12,11 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
-from engine.models import Consents, Customer
+from engine.models import Consents, Customer, Goal
 
 log = logging.getLogger("foresight.store")
+
+MAX_GOALS = 10
 
 FeedbackAction = str  # validated by the API model (not_now | not_relevant | never | helpful)
 
@@ -28,6 +30,7 @@ class Store:
         self.feedback: list[dict[str, Any]] = []
         self.deliveries: list[dict[str, Any]] = []
         self.decision_log: list[dict[str, Any]] = []
+        self.goals: dict[str, list[Goal]] = {}
         self.decision_log_path = decision_log_path
         self.load_customers(customers_path)
 
@@ -62,6 +65,9 @@ class Store:
             self.feedback.append(entry)
         return entry
 
+    def feedback_count(self, customer_id: str) -> int:
+        return sum(1 for fb in self.feedback if fb["customer_id"] == customer_id)
+
     def is_suppressed(self, customer_id: str, moment_type: str, today: date) -> str | None:
         """Return the feedback action that suppresses this moment today, if any."""
         for fb in reversed(self.feedback):
@@ -88,6 +94,33 @@ class Store:
 
     def opt_out_count(self) -> int:
         return sum(1 for fb in self.feedback if fb["action"] == "never")
+
+    # ------------------------------------------------------------------ goals
+    def add_goal(self, customer_id: str, goal: Goal) -> Goal:
+        with self._lock:
+            goals = self.goals.setdefault(customer_id, [])
+            if len(goals) >= MAX_GOALS:
+                raise ValueError(f"At most {MAX_GOALS} goals per customer")
+            goals.append(goal)
+            return goal
+
+    def list_goals(self, customer_id: str) -> list[Goal]:
+        return list(self.goals.get(customer_id, []))
+
+    def delete_goal(self, customer_id: str, goal_id: str) -> Goal | None:
+        with self._lock:
+            goals = self.goals.get(customer_id, [])
+            for i, g in enumerate(goals):
+                if g.id == goal_id:
+                    return goals.pop(i)
+        return None
+
+    def goals_count(self) -> int:
+        return sum(len(g) for g in self.goals.values())
+
+    def with_goals(self, customer: Customer) -> Customer:
+        """A copy of the customer with their stated goals attached, for the rules to read."""
+        return customer.model_copy(update={"goals": self.list_goals(customer.id)})
 
     # ------------------------------------------------------------- deliveries
     def record_delivery(self, customer_id: str, moment_type: str, today: date) -> None:

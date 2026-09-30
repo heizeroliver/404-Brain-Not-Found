@@ -12,6 +12,7 @@ REQUIRES_INSURANCE_DATA = False
 PROJECTABLE = False  # state-based: only evaluated for today
 MIN_BALANCE = 15000.0
 MONTHS = 6
+MIN_IDLE = 2000.0  # below this, after the customer's reserved goals, there is nothing to say
 
 
 def detect(customer: Customer, today: date) -> list[Moment]:
@@ -26,11 +27,19 @@ def detect(customer: Customer, today: date) -> list[Moment]:
     balance = customer.accounts.savings_balance
     if floor <= threshold or balance <= threshold:
         return []
-    idle = balance - MONTHS * net
+    # The customer's own goals come first: money she said to keep available is not idle.
+    reserved_goals = [g for g in customer.goals if g.keep_accessible]
+    reserved = sum(g.amount for g in reserved_goals)
+    idle = balance - MONTHS * net - reserved
+    if reserved and idle < MIN_IDLE:
+        return []
     evidence = [
         f"savings balance {eur(balance)} stayed above {eur(threshold)} for {MONTHS} months "
         f"({MONTHS} x net monthly income {eur(net)})",
-        f"about {eur(idle)} above a {MONTHS}-month buffer",
+        *(f"{eur(g.amount)} reserved for your {g.purpose.replace('_', ' ')} "
+          f"(your own goal, set {g.created.isoformat()})" for g in reserved_goals),
+        f"about {eur(idle)} above a {MONTHS}-month buffer"
+        + (f" and your reserved {eur(reserved)}" if reserved else ""),
     ]
     fidelity = customer.accounts.fidelity_date
     if fidelity and 0 <= (fidelity - today).days <= 60:

@@ -13,7 +13,7 @@ import threading
 from datetime import date, timedelta
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from engine.models import Customer, Moment, Stakes
 from engine.render import render
@@ -36,6 +36,16 @@ class Condition(BaseModel):
     field: str = Field(pattern=r"^[a-z_][a-z0-9_]{1,40}$")
     op: ConditionOp
     value: Scalar | list[Scalar] = None
+
+    @field_validator("value")
+    @classmethod
+    def _bounded_value(cls, v: Any) -> Any:
+        items = v if isinstance(v, list) else [v]
+        if len(items) > 20:
+            raise ValueError("at most 20 values")
+        if any(isinstance(i, str) and len(i) > 100 for i in items):
+            raise ValueError("value too long")
+        return v
 
     def holds(self, twin: dict[str, Any]) -> bool:
         actual = twin.get(self.field)
@@ -85,6 +95,8 @@ class Impact(BaseModel):
             raise ValueError("field and pct are required for this impact kind")
         if self.kind == "yearly_schedule" and not self.schedule:
             raise ValueError("schedule is required for yearly_schedule")
+        if self.schedule and len(self.schedule) > 20:
+            raise ValueError("schedule has at most 20 years")
         if self.schedule and not all(k.isdigit() and len(k) == 4 for k in self.schedule):
             raise ValueError("schedule keys must be years")
         return self
@@ -140,7 +152,7 @@ class WorldRule(BaseModel):
     human_review: bool = False
     legal_basis: str = Field(default="legitimate_interest", max_length=80)
     requires_insurance_data: bool = False
-    source_url: str | None = Field(default=None, max_length=300)
+    source_url: str | None = Field(default=None, max_length=300, pattern=r"^https://[^\s<>\"']+$")
 
     @model_validator(mode="after")
     def _texts(self) -> "WorldRule":
