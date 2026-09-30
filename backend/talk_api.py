@@ -98,6 +98,7 @@ class TalkResponse(BaseModel):
     evidence: list[str] = Field(default_factory=list)
     assumptions: list[str] = Field(default_factory=list)
     proposal: Proposal | None = None
+    preview: dict[str, Any] | None = None
     suggestions: list[Suggestion] = Field(min_length=2, max_length=4)
     context: dict[str, Any]
     synthetic: bool = True
@@ -118,8 +119,8 @@ Q = {
 }
 
 KEYWORDS: dict[str, list[str]] = {
-    "spending": ["waar ging mijn geld", "waar is mijn geld", "uitgaven", "uitgegeven", "where did my money",
-                 "spent", "spending", "expenses", "depenses", "ou est passe", "ou va mon argent"],
+    "spending": ["waar ging mijn geld", "waar is mijn geld", "uitgaven", "uitgegeven", "uitgeven", "where did my money",
+                 "spent", "spend", "spending", "expenses", "depense", "ou est passe", "ou va mon argent"],
     "upcoming": ["komt eraan", "komende", "binnenkort", "coming up", "upcoming", "next 90 days", "a venir",
                  "prochains", "prochaines"],
     "why": ["waarom", "why", "pourquoi"],
@@ -213,20 +214,54 @@ def _priority(customer: Customer, lang: str, moment_type: str | None = None) -> 
 
 # ---------------------------------------------------------------- intents --
 
+# A goal needs a goal-setting verb, not just a number: "Why is €5,700 available?" is a question.
+_GOAL_VERB = re.compile(
+    r"\b(keep|set aside|put aside|reserve|save up|save for|saving for|goal|"
+    r"houden|opzij|apart|reserveer|reserveren|sparen voor|spaar voor|doel|"
+    r"garder|mettre de cote|mets de cote|reserver|epargner pour|objectif)")
+_QUESTION = re.compile(
+    r"(\?\s*$|^\s*(why|did|do|does|have|has|how|what|is|are|was|were|can|could|"
+    r"waarom|heb|hebt|heeft|hoeveel|wat|is|zijn|was|kan|"
+    r"pourquoi|ai-je|est-ce|combien|quel|quelle|qu)\b)")
+
+
 def _detect(text: str) -> str:
     folded = _fold(text)
-    if any(cur for _, cur in amounts(text)):
+    if any(k in folded for k in KEYWORDS["spending"]):
+        return "spending"
+    if any(k in folded for k in KEYWORDS["why"]):
+        return "why"
+    if amounts(text) and _GOAL_VERB.search(folded) and not _QUESTION.search(folded):
         return "goal"
-    for intent in ("spending", "upcoming", "save_more", "why"):
+    for intent in ("upcoming", "save_more"):
         if any(k in folded for k in KEYWORDS[intent]):
             return intent
-    return "goal" if re.search(r"\d", text) else "clarify"
+    return "clarify"
 
 
-def _spending(customer: Customer, lang: str, ctx: TalkContext | None) -> TalkResponse:
+def _spending(customer: Customer, lang: str, ctx: TalkContext | None, text: str = "") -> TalkResponse:
     today = config.today()
     s = spending.summarize(customer, today, 3, lang)
     a, b = s["from"], s["to"]
+    folded = _fold(text)
+    cat = next((r for r in s["rows"] if _fold(r["label"]) in folded or r["key"] in folded), None)
+    if amounts(text):
+        # "Did I spend €100 on groceries?" asks about one payment: the category total does not answer that.
+        msg = {"nl": "Ik kan geen afzonderlijke betaling nakijken, alleen totalen per categorie over de laatste 3 maanden.",
+               "en": "I can't check a single payment, only totals per category over the last 3 months.",
+               "fr": "Je ne peux pas vérifier un paiement précis, seulement les totaux par catégorie sur les 3 derniers mois."}[lang]
+        if cat:
+            msg += " " + {"nl": f"{cat['label']}: {_eur(cat['value'], lang)} in totaal.",
+                          "en": f"{cat['label']}: {_eur(cat['value'], lang)} in total.",
+                          "fr": f"{cat['label']} : {_eur(cat['value'], lang)} au total."}[lang]
+        rows = [cat] if cat else s["rows"]
+        return _resp(
+            "spending", msg, lang, _ctx(ctx), _sugg(lang, "spending", "upcoming", "why"),
+            period={"from": a.isoformat(), "to": b.isoformat(), "label": _period_label(a, b, lang)},
+            chart={"kind": "category_bars", "unit": "eur", "rows": rows,
+                   "total": round(sum(r["value"] for r in rows), 2)},
+            evidence=[f"category totals {a.isoformat()}..{b.isoformat()}; individual transactions not searched"],
+            assumptions=[SYNTH[lang]])
     if s["largest"]:
         big = s["largest"]
         msg = {"nl": f"Je gaf {_eur(s['spending'], lang)} uit. Grootste post: {big['label']} ({s['largest_share']}%).",
@@ -302,6 +337,13 @@ def _summary(p: dict[str, Any], lang: str) -> str:
 
 
 def _goal(customer: Customer, text: str, lang: str, ctx: TalkContext | None) -> TalkResponse:
+    distinct = sorted({v for v, cur in amounts(text) if cur} or {v for v, _ in amounts(text)})
+    if len(distinct) > 1:
+        heard = ", ".join(_eur(v, lang) for v in distinct[:4])
+        msg = {"nl": f"Ik hoorde meerdere bedragen ({heard}). Welk bedrag wil je beschikbaar houden, en waarvoor?",
+               "en": f"I heard more than one amount ({heard}). Which amount do you want to keep available, and for what?",
+               "fr": f"J'ai entendu plusieurs montants ({heard}). Quel montant voulez-vous garder disponible, et pour quoi ?"}[lang]
+        return _resp("clarify", msg, lang, _ctx(ctx), _sugg(lang, "goal", "why", "upcoming"))
     p = parse_goal(text, lang)
     if not p:
         return _clarify(lang, ctx)
@@ -310,16 +352,57 @@ def _goal(customer: Customer, text: str, lang: str, ctx: TalkContext | None) -> 
     msg = {"nl": f"Zal ik dit als doel bewaren? {prop.summary}. Er wordt geen geld verplaatst.",
            "en": f"Shall I save this as a goal? {prop.summary}. No money is moved.",
            "fr": f"J'enregistre cet objectif ? {prop.summary}. Aucun argent n'est déplacé."}[lang]
-    return _resp("goal_proposal", msg, lang, _ctx(ctx), _sugg(lang, "why", "upcoming"), proposal=prop)
+    return _resp("goal_proposal", msg, lang, _ctx(ctx), _sugg(lang, "why", "upcoming"), proposal=prop,
+                 preview=_preview(customer, p["purpose"], p["amount"], p["keep_accessible"], lang))
+
+
+def _rec(m: dict[str, Any] | None) -> dict[str, Any] | None:
+    return None if m is None else {"type": m["type"], "title": m["title"], "message": m["message"]}
+
+
+def _alloc_numbers(alloc: dict[str, Any]) -> dict[str, float]:
+    return {k: alloc[k] for k in ("savings", "buffer", "buffer_covered", "reserved_total", "reserved_covered",
+                                  "shortfall", "remaining")}
+
+
+def _preview(customer: Customer, purpose: str, amount: float, keep: bool, lang: str) -> dict[str, Any]:
+    """What changes if the customer confirms: same calculation on a temporary copy, nothing stored."""
+    goal = Goal(id="g_" + "0" * 12, purpose=purpose, amount=amount, keep_accessible=keep, created=config.today())
+    temp = customer.model_copy(update={"goals": list(customer.goals) + [goal]})
+    before, after = allocation.compute(customer), allocation.compute(temp)
+    rb, ra = _rec(_priority(customer, lang)), _rec(_priority(temp, lang))
+    label = PURPOSE.get(purpose, PURPOSE["other"])[lang]
+    covered = after["reserved"][-1]["covered"] if after["reserved"] else 0.0
+    why = {"nl": f"Je buffer blijft {_eur(after['buffer'], lang)} (aanname). {_eur(covered, lang)} gaat naar {label}, "
+                 f"dus wat boven buffer en doelen overblijft gaat van {_eur(before['remaining'], lang)} naar {_eur(after['remaining'], lang)}.",
+           "en": f"Your buffer stays {_eur(after['buffer'], lang)} (assumption). {_eur(covered, lang)} goes to {label}, "
+                 f"so what is left above buffer and goals goes from {_eur(before['remaining'], lang)} to {_eur(after['remaining'], lang)}.",
+           "fr": f"Votre réserve reste de {_eur(after['buffer'], lang)} (hypothèse). {_eur(covered, lang)} va à {label}, "
+                 f"donc le solde au-delà de la réserve et des objectifs passe de {_eur(before['remaining'], lang)} à {_eur(after['remaining'], lang)}."}[lang]
+    if after["shortfall"] > before["shortfall"]:
+        why += " " + {"nl": f"Er ontbreekt {_eur(after['shortfall'] - before['shortfall'], lang)} om dit doel volledig te dekken.",
+                      "en": f"{_eur(after['shortfall'] - before['shortfall'], lang)} is not covered by your savings.",
+                      "fr": f"{_eur(after['shortfall'] - before['shortfall'], lang)} n'est pas couvert par votre épargne."}[lang]
+    return {"current": {**_alloc_numbers(before), "chart": _alloc_chart(before, lang)},
+            "proposed": {**_alloc_numbers(after), "chart": _alloc_chart(after, lang)},
+            "recommendation": {"before": rb, "after": ra,
+                               "changed": rb != ra},
+            "explanation": why, "saved": False,
+            "assumption": BUFFER_ASSUMPTION[lang]}
 
 
 def _alloc_chart(alloc: dict[str, Any], lang: str) -> dict[str, Any]:
-    segs = [{"key": "buffer", "label": L["buffer"][lang], "value": round(min(alloc["buffer"], alloc["savings"]), 2)}]
+    """Funded segments only, so they add up to savings; unfunded goal amounts are listed apart."""
+    segs = [{"key": "buffer", "label": L["buffer"][lang], "value": alloc["buffer_covered"]}]
+    unfunded = []
     for r in alloc["reserved"]:
-        segs.append({"key": f"goal:{r['goal_id']}", "label": PURPOSE.get(r["purpose"], PURPOSE["other"])[lang],
-                     "value": r["amount"]})
+        name = PURPOSE.get(r["purpose"], PURPOSE["other"])[lang]
+        segs.append({"key": f"goal:{r['goal_id']}", "label": name, "value": r["covered"]})
+        if r["shortfall"] > 0:
+            unfunded.append({"label": name, "requested": r["amount"], "shortfall": r["shortfall"]})
     segs.append({"key": "remaining", "label": L["remaining"][lang], "value": alloc["remaining"]})
-    return {"kind": "allocation", "segments": segs, "total": alloc["savings"]}
+    return {"kind": "allocation", "segments": segs, "total": alloc["savings"], "unfunded": unfunded,
+            "buffer_shortfall": alloc["buffer_shortfall"]}
 
 
 def _why(customer: Customer, lang: str, ctx: TalkContext | None) -> TalkResponse:
@@ -392,7 +475,7 @@ def talk(body: TalkRequest, customer_id: str = Depends(auth.current_customer_id)
     customer = _load(customer_id, lang)
     intent = _detect(body.text)
     if intent == "spending":
-        return _spending(customer, lang, body.context)
+        return _spending(customer, lang, body.context, body.text)
     if intent == "upcoming":
         return _upcoming(customer, lang, body.context)
     if intent == "goal":
@@ -402,6 +485,14 @@ def talk(body: TalkRequest, customer_id: str = Depends(auth.current_customer_id)
     if intent == "save_more":
         return _save_more(customer, lang, body.context)
     return _clarify(lang, body.context)
+
+
+@router.post("/me/talk/goal/preview")
+def preview_goal(body: GoalConfirm, customer_id: str = Depends(auth.current_customer_id),
+                 lang: Lang = LANG_QUERY) -> dict[str, Any]:
+    """Non-mutating "What changes if…?" for an edited amount. Nothing is stored."""
+    customer = _load(customer_id, lang)
+    return _preview(customer, body.purpose, body.amount, body.keep_accessible, lang)
 
 
 @router.post("/me/talk/goal/confirm", response_model=TalkResponse)

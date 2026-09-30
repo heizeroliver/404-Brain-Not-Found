@@ -79,15 +79,11 @@ export function renderCustomer(root, section) {
 function allocationSection(a) {
   const sec = h("section", "card stack-3", null, [el("h2", "section-title", t("alloc_title"))]);
   if (!a) return sec;
-  const segs = [{ key: "buffer", label: t("alloc_buffer"), value: Math.min(a.buffer, a.savings), color: "#003665" }];
-  const reserved = a.reserved || [];
-  if (reserved.length && a.reserved_covered > 0) {
-    let left = a.reserved_covered;
-    reserved.forEach((r) => {
-      const v = Math.min(r.amount, left); left -= v;
-      segs.push({ key: "goal-" + r.goal_id, label: cap(t("gp_" + r.purpose)), value: v, color: "#00AEEF" });
-    });
-  }
+  // funded amounts come from the backend (engine/allocation.py) and always add up to savings
+  const segs = [{ key: "buffer", label: t("alloc_buffer"), value: a.buffer_covered ?? Math.min(a.buffer, a.savings), color: "#003665" }];
+  (a.reserved || []).forEach((r) => {
+    if (r.covered > 0) segs.push({ key: "goal-" + r.goal_id, label: cap(t("gp_" + r.purpose)), value: r.covered, color: "#00AEEF" });
+  });
   segs.push({ key: "remaining", label: t("alloc_remaining"), value: a.remaining, color: "#9FB7CC", pattern: "hatch" });
   sec.appendChild(allocationBar(segs, { label: t("alloc_total", fmtEur(a.savings)) }));
   if (a.shortfall > 0) {

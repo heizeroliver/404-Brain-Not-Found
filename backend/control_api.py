@@ -3,6 +3,7 @@
   GET   /admin/v2/overview
   GET   /admin/v2/moments
   GET   /admin/v2/advisor-requests, PATCH /admin/v2/advisor-requests/{id}
+  GET   /admin/v2/customers/{id}/receipt   (decision receipt from arbitration + advisor requests)
   GET   /admin/v2/rule-template
   POST  /admin/v2/rules/preview   (never mutates the rulebook)
   POST  /admin/v2/rules/activate
@@ -203,6 +204,48 @@ def advisor_requests(_: auth.Principal = Depends(auth.require_admin),
                      ) -> dict[str, Any]:
     items = sorted(requests_store.all_requests(status_ or None), key=lambda r: r["created"], reverse=True)
     return {"items": [_with_customer(r) for r in items]}
+
+
+@router.get("/admin/v2/customers/{customer_id}/receipt")
+def receipt(customer_id: str = Path(pattern=r"^[a-z0-9_]{2,40}$"),
+            _: auth.Principal = Depends(auth.require_admin)) -> dict[str, Any]:
+    """Decision receipt for one customer, built only from what arbitration records (record=False)
+    plus the customer's actual advisor requests. Nothing is inferred beyond those records."""
+    store = _api().store
+    customer = store.get_customer(customer_id)
+    if customer is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown customer")
+    today = config.today()
+    c = store.with_goals(customer)
+    moments_ = run_rules(c, today)
+    result = arbitrate(c, moments_, today, store, record=False)
+    by_type = {m.type: m for m in moments_}
+    shown = next((rm for rm in result.ranked if rm.delivery == "now"), None)
+    care = next((rm for rm in result.ranked if rm.moment.category == "care"), None)
+    situation = care or shown
+    reasons = {d["moment_type"]: d["reason"] for d in result.decisions}
+    withheld = [{"type": d["moment_type"], "category": by_type[d["moment_type"]].category,
+                 "reason": d["reason"], "reason_key": _suppression_key(d["reason"])}
+                for d in result.decisions if d["decision"] == "dropped" and d["moment_type"] in by_type]
+    deferred = [{"type": rm.moment.type, "reason": reasons.get(rm.moment.type), "reason_key": "frequency_cap"}
+                for rm in result.ranked if rm.delivery == "queued"]
+    requests = sorted(requests_store.for_customer(customer_id), key=lambda r: r["created"], reverse=True)
+    return {
+        "customer_id": c.id, "customer_name": c.name, "today": today.isoformat(), "care_mode": result.care_mode,
+        "situation": None if situation is None else {
+            "type": situation.moment.type, "source": situation.moment.source, "stakes": situation.moment.stakes,
+            "category": situation.moment.category},
+        "shown": None if shown is None else {
+            "type": shown.moment.type, "rank": shown.rank, "channel": shown.channel, "delivery": shown.delivery,
+            "reason": reasons.get(shown.moment.type),
+            "channel_reason": _channel_reason(shown.moment, c, shown.channel)},
+        "also_shown": [rm.moment.type for rm in result.ranked if rm.delivery == "now" and rm is not shown],
+        "withheld": withheld,
+        "deferred": deferred,
+        "channel": None if shown is None else shown.channel,
+        "advisor_requests": [{"id": r["id"], "status": r["status"], "moment_type": r["moment_type"],
+                              "created": r["created"], "updated": r["updated"]} for r in requests],
+    }
 
 
 class StatusUpdate(BaseModel):

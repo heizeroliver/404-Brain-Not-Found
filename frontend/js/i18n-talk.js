@@ -1,6 +1,13 @@
 // "Praat met Kate" strings (nl default, en, fr). Registered by talk.js at load.
 export default {
   nl: {
+    tk_no_speech: "Geen spraak herkend. Probeer opnieuw of typ je vraag.", tk_voice_fail: "Gesproken antwoord niet beschikbaar; het tekstantwoord staat hieronder.",
+    tk_unfunded: "{0}: {1} gevraagd, {2} niet gedekt door je spaargeld", tk_pv_title: "Wat verandert er als je bevestigt?",
+    tk_pv_current: "Huidig plan", tk_pv_proposed: "Voorgesteld plan", tk_pv_savings: "Spaargeld", tk_pv_buffer: "Buffer (aanname)",
+    tk_pv_goals: "Gereserveerd voor doelen", tk_pv_remaining: "Over boven buffer en doelen", tk_pv_short: "Niet gedekt door spaargeld: {0}",
+    tk_pv_rec_now: "Kate stelt nu voor", tk_pv_rec_after: "Na dit plan", tk_pv_none: "Niets",
+    tk_pv_nothing_saved: "Alleen een voorbeeld: er wordt niets bewaard en er wordt geen geld verplaatst.",
+    tk_apply: "Pas dit plan toe", tk_keep: "Behoud mijn huidig plan",
     tk_check_transcript: "Controleer de tekst en druk op Enter om te versturen.",
     tk_title: "Praat met Kate",
     tk_sub: "AI-assistent · antwoorden op basis van je eigen gegevens en regels",
@@ -25,6 +32,13 @@ export default {
     tk_basis_contract: "contract", tk_basis_legal: "wettelijk", tk_basis_estimate_from_history: "schatting op basis van historiek", tk_basis_customer_goal: "jouw doel",
   },
   en: {
+    tk_no_speech: "No speech recognised. Try again or type your question.", tk_voice_fail: "Spoken answer unavailable; the text answer is shown.",
+    tk_unfunded: "{0}: {1} requested, {2} not covered by your savings", tk_pv_title: "What changes if you confirm?",
+    tk_pv_current: "Current plan", tk_pv_proposed: "Proposed plan", tk_pv_savings: "Savings", tk_pv_buffer: "Modeled buffer (assumption)",
+    tk_pv_goals: "Reserved for goals", tk_pv_remaining: "Remaining above buffer and goals", tk_pv_short: "Not covered by savings: {0}",
+    tk_pv_rec_now: "Kate suggests now", tk_pv_rec_after: "After this plan", tk_pv_none: "Nothing",
+    tk_pv_nothing_saved: "Preview only: nothing is saved and no money moves.",
+    tk_apply: "Apply this plan", tk_keep: "Keep my current plan",
     tk_check_transcript: "Check the text and press Enter to send.",
     tk_title: "Talk to Kate",
     tk_sub: "AI assistant · answers based on your own data and rules",
@@ -49,6 +63,13 @@ export default {
     tk_basis_contract: "contract", tk_basis_legal: "legal", tk_basis_estimate_from_history: "estimate based on history", tk_basis_customer_goal: "your goal",
   },
   fr: {
+    tk_no_speech: "Aucune parole reconnue. Réessayez ou tapez votre question.", tk_voice_fail: "Réponse vocale indisponible ; la réponse écrite est affichée.",
+    tk_unfunded: "{0} : {1} demandés, {2} non couverts par votre épargne", tk_pv_title: "Que change ce plan si vous confirmez ?",
+    tk_pv_current: "Plan actuel", tk_pv_proposed: "Plan proposé", tk_pv_savings: "Épargne", tk_pv_buffer: "Réserve (hypothèse)",
+    tk_pv_goals: "Réservé aux objectifs", tk_pv_remaining: "Reste au-delà de la réserve et des objectifs", tk_pv_short: "Non couvert par l'épargne : {0}",
+    tk_pv_rec_now: "Kate suggère maintenant", tk_pv_rec_after: "Après ce plan", tk_pv_none: "Rien",
+    tk_pv_nothing_saved: "Aperçu seulement : rien n'est enregistré et aucun argent n'est déplacé.",
+    tk_apply: "Appliquer ce plan", tk_keep: "Garder mon plan actuel",
     tk_check_transcript: "Vérifiez le texte et appuyez sur Entrée pour envoyer.",
     tk_title: "Parler à Kate",
     tk_sub: "Assistante IA · réponses basées sur vos propres données et règles",

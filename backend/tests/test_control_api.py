@@ -14,7 +14,8 @@ def admin(headers_for):
 
 
 ROUTES = [("get", "/admin/v2/overview"), ("get", "/admin/v2/moments"), ("get", "/admin/v2/advisor-requests"),
-          ("get", "/admin/v2/rule-template"), ("get", "/admin/v2/audit")]
+          ("get", "/admin/v2/rule-template"), ("get", "/admin/v2/audit"),
+          ("get", "/admin/v2/customers/rita/receipt")]
 
 
 @pytest.mark.parametrize("method, path", ROUTES)
@@ -108,3 +109,20 @@ def test_audit_shape(client, admin):
     assert sum(d["consents"]["marketing"].values()) == len(store.customers)
     assert isinstance(d["feedback"], dict) and isinstance(d["suppressed_by_reason"], list)
     assert d["log"]["page"] == 1 and len(d["log"]["items"]) <= 25
+
+
+def test_receipt_rita_care_mode(client, admin):
+    requests_store.reset()
+    d = client.get("/admin/v2/customers/rita/receipt", headers=admin).json()
+    assert d["customer_id"] == "rita" and d["care_mode"] is True
+    assert d["situation"]["category"] == "care"
+    assert d["shown"] and d["channel"] == d["shown"]["channel"]
+    assert d["withheld"] and all(w["reason_key"] == "care_mode" and w["category"] == "sales" for w in d["withheld"])
+    assert all(w["reason"] == "vulnerability guard: care mode active, no sales" for w in d["withheld"])
+    assert d["advisor_requests"] == []
+    req, _ = requests_store.create("rita", d["situation"]["type"], "test", {})
+    d2 = client.get("/admin/v2/customers/rita/receipt", headers=admin).json()
+    assert d2["advisor_requests"][0]["id"] == req["id"] and d2["advisor_requests"][0]["status"] == "requested"
+    assert client.get("/admin/v2/customers/nobody_here/receipt", headers=admin).status_code == 404
+    assert client.get("/admin/v2/customers/Bad-Id/receipt", headers=admin).status_code == 422
+    requests_store.reset()

@@ -46,6 +46,14 @@ const CSS = `
 .talk-starters p { font-size: 13px; color: var(--muted); margin-bottom: 8px; }
 .talk-composer { position: sticky; bottom: 0; background: var(--surface); border-top: 1px solid var(--line); padding: 12px 0 16px; display: flex; gap: 8px; align-items: center; z-index: 10; }
 .talk-composer .field { flex: 1; }
+.tk-preview { border-top: 1px solid var(--line); padding-top: 12px; }
+.tk-pv-title { font-size: 16px; font-weight: 700; color: var(--navy); }
+.tk-plans { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.tk-plan { background: var(--bg, #F4F7FA); border-radius: 10px; padding: 12px; }
+.tk-plan-facts { flex-direction: column; gap: 6px; }
+.tk-rec { flex-direction: column; gap: 8px; }
+.tk-rec dd { font-weight: 400; color: var(--ink); }
+@media (max-width: 560px) { .tk-plans { grid-template-columns: 1fr; } }
 .talk-err { color: var(--danger); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .talk-empty { color: var(--muted); font-size: 14px; }
 @media (max-width: 767px) {
@@ -170,7 +178,10 @@ export async function renderTalk(root) {
           if (base === "remaining") seg.pattern = "hatch";
           return seg;
         });
-        return charts.allocationBar(segs, { label: t("tk_alloc") + (ch.total != null ? " · " + fmtEur(ch.total) : "") });
+        const fig = charts.allocationBar(segs, { label: t("tk_alloc") + (ch.total != null ? " · " + fmtEur(ch.total) : "") });
+        (ch.unfunded || []).forEach((u) => fig.appendChild(el("p", "tag tag-warn",
+          lbl("tk_unfunded", "{0}: {1} requested, {2} not covered by savings").replace("{0}", u.label).replace("{1}", fmtEur(u.requested)).replace("{2}", fmtEur(u.shortfall)))));
+        return fig;
       }
       if (ch.kind === "timeline") {
         const items = (ch.items || []).map((it) => ({
@@ -241,10 +252,44 @@ export async function renderTalk(root) {
     return box;
   }
 
-  function proposalNode(p, msgEl) {
+  function planCol(title, n) {
+    const col = el("div", "tk-plan");
+    col.appendChild(el("p", "eyebrow", title));
+    const dl = el("dl", "talk-facts tk-plan-facts");
+    [[lbl("tk_pv_savings", "Savings"), n.savings], [lbl("tk_pv_buffer", "Modeled buffer (assumption)"), n.buffer_covered],
+     [lbl("tk_pv_goals", "Reserved for goals"), n.reserved_covered], [lbl("tk_pv_remaining", "Remaining above buffer and goals"), n.remaining]]
+      .forEach(([k, v]) => { const d = el("div"); d.append(el("dt", null, k), el("dd", "num", fmtEur(v))); dl.appendChild(d); });
+    col.appendChild(dl);
+    if (n.shortfall > 0) col.appendChild(el("p", "tag tag-warn", lbl("tk_pv_short", "Not covered by savings: {0}").replace("{0}", fmtEur(n.shortfall))));
+    return col;
+  }
+  function previewNode(pv) {
+    const box = el("div", "tk-preview stack-sm");
+    box.appendChild(el("h3", "tk-pv-title", lbl("tk_pv_title", "What changes if you confirm?")));
+    const grid = el("div", "tk-plans");
+    grid.append(planCol(lbl("tk_pv_current", "Current plan"), pv.current), planCol(lbl("tk_pv_proposed", "Proposed plan"), pv.proposed));
+    box.appendChild(grid);
+    const c = chartNode(pv.proposed.chart);
+    if (c) box.appendChild(c);
+    const rec = pv.recommendation || {};
+    const b = rec.before, a = rec.after;
+    const rl = el("dl", "talk-facts tk-rec");
+    const row = (k, v) => { const d = el("div"); d.append(el("dt", null, k), el("dd", null, v)); rl.appendChild(d); };
+    row(lbl("tk_pv_rec_now", "Kate suggests now"), b ? b.message || b.title : lbl("tk_pv_none", "Nothing"));
+    row(lbl("tk_pv_rec_after", "After this plan"), a ? a.message || a.title : lbl("tk_pv_none", "Nothing"));
+    box.appendChild(rl);
+    box.appendChild(el("p", "small", pv.explanation || ""));
+    box.appendChild(el("p", "micro muted", lbl("tk_pv_nothing_saved", "Preview only: nothing is saved and no money moves.") + " " + (pv.assumption || "")));
+    return box;
+  }
+
+  function proposalNode(p, msgEl, pv) {
     const card = el("div", "talk-card stack-sm");
     card.appendChild(el("p", "eyebrow", t("tk_proposal")));
     card.appendChild(el("p", "num", p.summary || ""));
+    let pvSlot = el("div");
+    if (pv) pvSlot.appendChild(previewNode(pv));
+    card.appendChild(pvSlot);
     const actions = el("div", "talk-actions");
     const lab = el("label", "label-block");
     const id = "tk-amt-" + Math.random().toString(36).slice(2, 8);
@@ -255,8 +300,20 @@ export async function renderTalk(root) {
     lab.append(l, amt);
     const err = el("p", "form-error");
     err.setAttribute("aria-live", "polite");
-    const ok = btn(t("tk_confirm"), "btn-primary");
-    const no = btn(t("tk_cancel"), "btn-secondary");
+    const ok = btn(lbl("tk_apply", t("tk_confirm")), "btn-primary");
+    const no = btn(lbl("tk_keep", t("tk_cancel")), "btn-secondary");
+    let pvTimer = null;
+    amt.addEventListener("input", () => {
+      clearTimeout(pvTimer);
+      pvTimer = setTimeout(async () => {
+        const amount = Number(amt.value);
+        if (!Number.isFinite(amount) || amount <= 0 || amount > 1000000) return;
+        try {
+          const next = await api("/me/talk/goal/preview", { method: "POST", lang: true, body: { purpose: p.purpose, amount, keep_accessible: p.keep_accessible !== false } });
+          const slot = el("div"); slot.appendChild(previewNode(next)); pvSlot.replaceWith(slot); pvSlot = slot;
+        } catch (_) { /* keep the last preview */ }
+      }, 350);
+    });
     actions.append(lab, ok, no);
     card.append(actions, err);
     const done = () => { ok.disabled = true; no.disabled = true; amt.disabled = true; };
@@ -286,6 +343,24 @@ export async function renderTalk(root) {
     return card;
   }
 
+  // one answer plays at a time; a failed voice call never removes the text answer
+  let stopPlayback = null;
+  async function say(text) {
+    try { if (stopPlayback) stopPlayback(); } catch (_) {}
+    stopPlayback = null;
+    try { stopPlayback = await voice.mod.speak(text, state.lang); }
+    catch (e) { console.warn("voice playback failed", e && e.message); toast(lbl("tk_voice_fail", "Spoken answer unavailable; the text answer is shown."), "warn"); }
+  }
+  function releaseVoice() {
+    try { if (stopPlayback) stopPlayback(); } catch (_) {}
+    stopPlayback = null;
+    try { if (voice.mic && voice.mic.stop) voice.mic.stop(); } catch (_) {}
+  }
+  const leave = () => { if (!document.body.contains(wrap)) { releaseVoice(); window.removeEventListener("hashchange", leave); window.removeEventListener("kate:logout", releaseVoice); } };
+  window.addEventListener("hashchange", () => setTimeout(leave, 0));
+  window.addEventListener("kate:logout", releaseVoice);
+  new MutationObserver((_, obs) => { if (!document.body.contains(wrap)) { releaseVoice(); obs.disconnect(); } }).observe(root, { childList: true });
+
   function addKate(r) {
     if (!r || typeof r !== "object") { addError(t("tk_error")); return; }
     if (r.context) context = r.context;
@@ -294,12 +369,12 @@ export async function renderTalk(root) {
     const txt = el("p", "talk-text", r.message || "");
     m.appendChild(txt);
     if (voice.tts && voice.mod && typeof voice.mod.speak === "function" && r.message) {
-      const sp = btn(t("tk_listen"), "btn-quiet btn-sm", () => { try { voice.mod.speak(r.message, state.lang); } catch (e) { console.error(e); } });
+      const sp = btn(t("tk_listen"), "btn-quiet btn-sm", () => say(r.message));
       sp.prepend(icon("play", 14));
       m.appendChild(sp);
       if (voice.speakNext) {  // the question was spoken: answer out loud, like a voice assistant
         voice.speakNext = false;
-        try { voice.mod.speak(r.message, state.lang); } catch (e) { console.error(e); }
+        say(r.message);
       }
     }
     const chart = chartNode(r.chart);
@@ -310,7 +385,7 @@ export async function renderTalk(root) {
       if (facts) card.appendChild(facts);
       m.appendChild(card);
     }
-    if (r.intent === "goal_proposal" && r.proposal) m.appendChild(proposalNode(r.proposal, m));
+    if (r.intent === "goal_proposal" && r.proposal) m.appendChild(proposalNode(r.proposal, m, r.preview));
     m.appendChild(sourcesNode(r));
     const chips = chipsNode(r.suggestions);
     if (chips) m.appendChild(chips);
@@ -371,10 +446,16 @@ export async function renderTalk(root) {
         const mic = mod.createMicButton({
           lang: state.lang,
           // show the transcript for a quick check (amounts!) instead of sending blindly; Enter sends
-          onTranscript(text) { if (text) { input.value = text; input.focus(); voice.speakNext = true; toast(t("tk_check_transcript")); } },
-          onState(s) { if (s === "error") toast(t("tk_mic_error"), "warn"); },
+          // contract: onTranscript({ text, amount_candidates }). Only the text goes into the input, for review;
+          // amounts are never applied by themselves (a goal still needs explicit confirmation).
+          onTranscript(result) {
+            const text = result && typeof result.text === "string" ? result.text.trim().slice(0, 300) : "";
+            if (!text) { toast(lbl("tk_no_speech", "No speech recognised. Try again or type your question."), "warn"); return; }
+            input.value = text; input.focus(); voice.speakNext = true; toast(t("tk_check_transcript"));
+          },
+          onState(s, message) { if (s === "error") toast(message || t("tk_mic_error"), "warn"); },
         });
-        if (mic instanceof Node) micSlot.appendChild(mic);
+        if (mic instanceof Node) { micSlot.appendChild(mic); voice.mic = mic; }
       }
     } catch (_) { /* voice optional: text still works */ }
   }
