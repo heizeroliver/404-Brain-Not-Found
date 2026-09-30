@@ -1,8 +1,9 @@
 """Narration: structured moment -> {message, why, cta_label} in the customer's language.
 
-Gemini (google-genai, Vertex AI) is used only when GCP_PROJECT is set and the
-import works. Every other case falls back to deterministic templates built from
-the moment's structured facts, so the whole system runs offline.
+Gemini (google-genai) is used when GEMINI_API_KEY / GOOGLE_API_KEY is set
+(Gemini Developer API) or, failing that, when GCP_PROJECT is set (Vertex AI).
+Every other case, and any exception, falls back to deterministic templates
+built from the moment's structured facts, so the whole system runs offline.
 
 Guardrails (ACTION_PLAN.md Appendix B, section 9):
   - the model receives structured fields, never raw transaction text
@@ -196,16 +197,28 @@ def template_narration(moment: Moment, customer: Customer) -> dict[str, str]:
 
 # ------------------------------------------------------------------ Gemini --
 
+def gemini_backend() -> str | None:
+    """'developer_api', 'vertex' or None (templates)."""
+    if config.GEMINI_API_KEY:
+        return "developer_api"
+    if config.GCP_PROJECT:
+        return "vertex"
+    return None
+
+
 def gemini_enabled() -> bool:
-    return bool(config.GCP_PROJECT)
+    return gemini_backend() is not None
 
 
 @lru_cache(maxsize=1)
 def _client() -> Any:
     from google import genai  # optional dependency, imported lazily
     from google.genai import types
+    http_options = types.HttpOptions(timeout=10_000)
+    if gemini_backend() == "developer_api":
+        return genai.Client(api_key=config.GEMINI_API_KEY, http_options=http_options)
     return genai.Client(vertexai=True, project=config.GCP_PROJECT, location=config.GCP_LOCATION,
-                        http_options=types.HttpOptions(timeout=10_000))
+                        http_options=http_options)
 
 
 _NUM = re.compile(r"\d[\d.,  ]*\d|\d")

@@ -64,9 +64,14 @@ LOGIN_RATE_LIMIT = _env("LOGIN_RATE_LIMIT", "5/minute")
 VOICE_RATE_LIMIT = _env("VOICE_RATE_LIMIT", "10/minute")
 JWT_TTL_HOURS = 8
 
+# Narration backends, in order of preference:
+#   1. Gemini Developer API (GEMINI_API_KEY, also accepts GOOGLE_API_KEY)
+#   2. Vertex AI (GCP_PROJECT + GCP_LOCATION, application-default credentials)
+#   3. deterministic templates (always available, used by the tests)
+GEMINI_API_KEY = _env("GEMINI_API_KEY") or _env("GOOGLE_API_KEY")
 GCP_PROJECT = _env("GCP_PROJECT")
 GCP_LOCATION = _env("GCP_LOCATION", "europe-west1")
-GEMINI_MODEL = _env("GEMINI_MODEL", "gemini-3.5-flash")
+GEMINI_MODEL = _env("GEMINI_MODEL", "gemini-2.5-flash")
 
 ELEVENLABS_API_KEY = _env("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_NL = _env("ELEVENLABS_VOICE_NL")
