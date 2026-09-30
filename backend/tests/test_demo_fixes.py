@@ -84,3 +84,16 @@ def test_multiple_goals_and_insufficient_buffer(client, headers_for):
     b = allocation.compute(poor)
     assert b["buffer_covered"] == 5000 and b["buffer_shortfall"] == 7300 and b["remaining"] == 0
     assert all(g["covered"] == 0 for g in b["reserved"])
+
+
+def test_quick_login_is_off_by_default(client):
+    assert client.get("/demo/quick-login").json() == {"enabled": False}
+    assert client.post("/demo/quick-login", json={"customer_id": "lien"}).status_code == 404
+
+
+def test_quick_login_when_enabled(client, monkeypatch):
+    import config
+    monkeypatch.setattr(config, "DEMO_QUICK_LOGIN", True)
+    r = client.post("/demo/quick-login", json={"customer_id": "lien"})
+    assert r.status_code == 200 and r.json()["role"] == "customer"
+    assert client.post("/demo/quick-login", json={"customer_id": "somebody"}).status_code == 422

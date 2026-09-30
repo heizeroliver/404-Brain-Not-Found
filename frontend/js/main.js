@@ -126,6 +126,8 @@ function renderLogin(root) {
   const form = el("form", "card login-form");
   const idField = el("input", "field"); idField.id = "login-id"; idField.autocomplete = "username"; idField.placeholder = "lien"; idField.required = true;
   const pwField = el("input", "field"); pwField.id = "login-pw"; pwField.type = "password"; pwField.autocomplete = "current-password"; pwField.required = true;
+  let quick = false;
+  api("/demo/quick-login").then((r) => { quick = !!(r && r.enabled); }).catch(() => {});
   for (const p of PERSONAS) {
     const b = el("button", "card persona");
     b.type = "button";
@@ -133,7 +135,16 @@ function renderLogin(root) {
     const txt = el("span", "persona-text");
     txt.append(el("span", "persona-name", p.name), el("span", "persona-sub", p.sub), el("span", "persona-blurb muted", p.blurb[state.lang] || p.blurb.en));
     b.append(av, txt);
-    b.addEventListener("click", () => {
+    b.addEventListener("click", async () => {
+      if (quick) {  // local demo recording: one click per persona, no password typed or shown
+        try {
+          const body = await api("/demo/quick-login", { method: "POST", body: { customer_id: p.id } });
+          state.token = body.access_token; state.role = body.role; state.profile = body.profile;
+          saveSession();
+          navigate(state.role === "admin" ? "#/control/overview" : "#/customer/overview");
+          return;
+        } catch (_) { quick = false; }
+      }
       idField.value = p.id;
       grid.querySelectorAll(".persona").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
       pwField.focus();
