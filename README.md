@@ -17,6 +17,7 @@ KBC's five questions: which signals help us understand what customers need; how 
 - **Bank + insurer data.** Transactions, savings, investments, pension saving and insurance contracts in one view. No fintech has that combination.
 - **Glass box.** Every card has a Why? drawer (signals, rule, confidence, legal basis, channel, human review). The customer answers Not now / Not relevant / Never / Helpful, and consents switch whole rule families off. The feed changes immediately.
 - **Intent, stated by the customer.** Lien types "Ik wil €8.000 beschikbaar houden voor mijn verbouwing". Kate turns it into a goal proposal (renovation, €8,000, keep accessible), Lien confirms, and the engine recalculates: the idle-cash suggestion drops from €13,700 to €5,700 and Why? shows "€8,000 reserved for your renovation (your own goal)". The parser is deterministic; an LLM may only propose the parse, never an amount the customer did not type.
+- **Talk to Kate (voice).** A Siri-style voice conversation (ElevenLabs agent) that only knows the moments the engine computed for this customer, so it cannot invent numbers. Setup: [docs/ELEVENLABS_AGENT.md](docs/ELEVENLABS_AGENT.md).
 - **The engine chooses the channel, including a human.** High stakes or low digital comfort go to an advisor. A vulnerability guard (care mode) drops every sales message when a customer is under pressure.
 
 ## How the prototype answers KBC's five questions
@@ -59,7 +60,7 @@ cd 404-Brain-Not-Found
 | **Rita**, 71, Kortrijk | Low digital comfort (1/5), €48k savings | Care mode banner; €900 payment held after a Verification-of-Payee name mismatch, callback plus Guardian Angel offer; energy bills +26%; home policy +7%. The term-account and idle-cash offers are held back by care mode |
 | **Control room** (admin) | KBC view over 203 customers | Moments by type, channel and source; care mode; human handoffs; opt-outs; world rules with affected counts; decision log. Open **Drop in a new rule**, keep the prefilled example, click **Run against all customers** |
 
-Tab **Mijn gegevens / My data** toggles consents (insurance data, other banks, marketing) and the feed changes. Tests: `cd backend && ../.venv/bin/pytest -q` (64 tests, fully offline). Manual setup, routes, Gemini and ElevenLabs configuration: [backend/README.md](backend/README.md).
+Tab **Mijn gegevens / My data** toggles consents (insurance data, other banks, marketing) and the feed changes. Tests: `cd backend && ../.venv/bin/pytest -q` (67 tests, fully offline). Manual setup, routes, Gemini and ElevenLabs configuration: [backend/README.md](backend/README.md).
 
 ## Architecture
 
@@ -154,7 +155,7 @@ backend/
   goals_api.py            /me/goals routes (token-scoped)
   scripts/benchmark.py    throughput benchmark
   data/generate.py        seeded synthetic dataset (203 customers)
-  tests/                  64 pytest tests: security, rules, arbitration, language, goals
+  tests/                  67 pytest tests: security, rules, arbitration, language, goals
   requirements.lock       pinned dependencies
 ```
 

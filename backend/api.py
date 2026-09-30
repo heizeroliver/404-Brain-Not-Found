@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from collections import Counter
 from datetime import date, datetime, timezone
 from typing import Any, Literal
@@ -79,12 +80,16 @@ async def security_headers(request: Request, call_next):  # type: ignore[no-unty
     if request.url.path.startswith("/app"):
         # the single-file frontend (one-container deploy): own origin only, inline script/style in that file
         response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
-            "img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; base-uri 'none'; "
+            "default-src 'self'; script-src 'self' 'unsafe-inline' https://unpkg.com; "
+            "style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; media-src 'self' blob: https:; "
+            "connect-src 'self' https://*.elevenlabs.io wss://*.elevenlabs.io https://api.us.elevenlabs.io; "
+            "worker-src 'self' blob:; frame-src https://*.elevenlabs.io; base-uri 'none'; "
             "form-action 'self'; frame-ancestors 'none'")
+        # the page may use the microphone for the Kate voice conversation (ElevenLabs agent)
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(self), geolocation=()"
     else:
         response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
-    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -183,6 +188,7 @@ def _now() -> str:
 
 
 AppLanguage = Literal["nl", "en", "fr"]
+VOICE_AGENT_ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 LANG_QUERY = Query("nl", description="App language: Dutch (default), English or French")
 
 
@@ -319,6 +325,38 @@ def update_consents(body: Consents, customer_id: str = Depends(auth.current_cust
                           "reason": ", ".join(f"{k}={'on' if v else 'off'}" for k, v in updated.model_dump().items()),
                           "score": None, "channel": None, "delivery": None}])
     return updated
+
+
+class AssistantConfig(BaseModel):
+    enabled: bool
+    agent_id: str | None = None
+    dynamic_variables: dict[str, str] = Field(default_factory=dict)
+
+
+@app.get("/me/assistant", response_model=AssistantConfig)
+def my_assistant(customer_id: str = Depends(auth.current_customer_id),
+                 lang: AppLanguage = LANG_QUERY) -> AssistantConfig:
+    """Config for the Kate voice conversation (ElevenLabs agent widget).
+
+    The agent only receives this customer's already-computed moments as context, so every
+    number it can say comes from the engine. Nothing is returned when no agent is configured.
+    """
+    agent_id = config.ELEVENLABS_AGENT_ID
+    if not agent_id or not VOICE_AGENT_ID.match(agent_id):
+        return AssistantConfig(enabled=False)
+    customer = _in_language(_customer(customer_id), lang)
+    result = _feed(customer, config.today(), record=False)
+    lines = []
+    for rm in result.ranked[:6]:
+        text = narrate(rm.moment, customer, allow_llm=False)
+        lines.append(f"- {text['message']} (Why: {text['why']}) [channel: {rm.channel}]")
+    language = {"nl": "Dutch (Flemish)", "en": "English", "fr": "French"}[lang]
+    return AssistantConfig(enabled=True, agent_id=agent_id, dynamic_variables={
+        "first_name": customer.first_name,
+        "language": language,
+        "care_mode": "yes" if result.care_mode else "no",
+        "moments": "\n".join(lines)[:3000] or "- No moments today.",
+    })
 
 
 @app.get("/me/voice/{moment_type}")

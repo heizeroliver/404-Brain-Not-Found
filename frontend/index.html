@@ -194,7 +194,7 @@
   const state = { token: null, role: null, profile: null, tab: "feed", feed: null, timeline: null, lang: "nl" };
   const I18N = {
     nl: {
-      tagline: "Prototype voor de KBC-case · Tectonic Hackathon", logout: "Afmelden",
+      tagline: "Prototype voor de KBC-case · Tectonic Hackathon", talk_kate: "Praat met Kate", talk_start: "Start gesprek", talk_end: "Stop", logout: "Afmelden",
       login_title: "Wie opent de app?", login_sub: "Kies een fictieve klant en open de app zoals die klant hem ziet.",
       persona: "Persona", password: "Demowachtwoord", open_app: "Open de app",
       tab_home: "Home", tab_timeline: "Tijdlijn", tab_data: "Mijn gegevens",
@@ -233,7 +233,7 @@
       gp_emergency_buffer: "noodbuffer", gp_house_purchase: "woning kopen", gp_other: "ander doel",
     },
     en: {
-      tagline: "Prototype for the KBC case · Tectonic Hackathon", logout: "Log out",
+      tagline: "Prototype for the KBC case · Tectonic Hackathon", talk_kate: "Talk to Kate", talk_start: "Start conversation", talk_end: "End", logout: "Log out",
       login_title: "Who is opening the app?", login_sub: "Pick a fictional customer and open the app the way they see it.",
       persona: "Persona", password: "Demo password", open_app: "Open the app",
       tab_home: "Home", tab_timeline: "Timeline", tab_data: "My data",
@@ -272,7 +272,7 @@
       gp_emergency_buffer: "emergency buffer", gp_house_purchase: "buying a home", gp_other: "other goal",
     },
     fr: {
-      tagline: "Prototype pour le cas KBC · Tectonic Hackathon", logout: "Se déconnecter",
+      tagline: "Prototype pour le cas KBC · Tectonic Hackathon", talk_kate: "Parler à Kate", talk_start: "Démarrer", talk_end: "Terminer", logout: "Se déconnecter",
       login_title: "Qui ouvre l'app ?", login_sub: "Choisissez un client fictif et ouvrez l'app comme il la voit.",
       persona: "Persona", password: "Mot de passe démo", open_app: "Ouvrir l'app",
       tab_home: "Accueil", tab_timeline: "Calendrier", tab_data: "Mes données",
@@ -323,7 +323,7 @@
     try { localStorage.setItem("kate_lang", lang); } catch (_) {}
     applyI18n();
     renderPersonas();
-    if (!$("view-customer").classList.contains("hidden")) setTab(state.tab);
+    if (!$("view-customer").classList.contains("hidden")) { setTab(state.tab); loadAssistant(); }
   }
 
 
@@ -358,6 +358,31 @@
       throw new Error(detail);
     }
     return res;
+  }
+
+  // ------------------------------------------------- Kate voice conversation
+  // ElevenLabs agent widget. The backend hands it this customer's computed moments only.
+  let assistantEl = null, widgetLoaded = false;
+  function removeAssistant() { if (assistantEl) { assistantEl.remove(); assistantEl = null; } }
+  async function loadAssistant() {
+    removeAssistant();
+    if (state.role !== "customer") return;
+    try {
+      const cfg = await (await api("/me/assistant?lang=" + state.lang)).json();
+      if (!cfg.enabled || !cfg.agent_id) return;
+      if (!widgetLoaded) {
+        const sc = document.createElement("script");
+        sc.src = "https://unpkg.com/@elevenlabs/convai-widget-embed"; sc.async = true; sc.type = "text/javascript";
+        document.body.appendChild(sc); widgetLoaded = true;
+      }
+      assistantEl = document.createElement("elevenlabs-convai");
+      assistantEl.setAttribute("agent-id", cfg.agent_id);
+      assistantEl.setAttribute("dynamic-variables", JSON.stringify(cfg.dynamic_variables));
+      assistantEl.setAttribute("action-text", t("talk_kate"));
+      assistantEl.setAttribute("start-call-text", t("talk_start"));
+      assistantEl.setAttribute("end-call-text", t("talk_end"));
+      document.body.appendChild(assistantEl);
+    } catch (_) { /* voice conversation is optional */ }
   }
 
   // ---------------------------------------------------------------- login
@@ -402,7 +427,7 @@
     ["login", "customer", "admin"].forEach((v) => $("view-" + v).classList.toggle("hidden", v !== view));
     $("logout").classList.toggle("hidden", view === "login");
     $("who").textContent = view === "login" ? "" : (state.profile && state.profile.name) || "";
-    if (view === "customer") { state.tab = "feed"; setTab("feed"); }
+    if (view === "customer") { state.tab = "feed"; setTab("feed"); loadAssistant(); } else { removeAssistant(); }
     if (view === "admin") loadAdmin();
   }
 
