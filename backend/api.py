@@ -34,6 +34,7 @@ from slowapi.util import get_remote_address
 
 import auth
 import config
+import persistence
 from engine.arbitrate import ArbitrationResult, arbitrate
 from engine.models import Channel, Consents, Customer, Moment
 from engine.narrate import gemini_backend, narrate
@@ -52,6 +53,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 log = logging.getLogger("foresight.api")
 
 app = FastAPI(title="Kate Foresight API", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None)
+persistence.install_handlers(app)
 store = Store(config.CUSTOMERS_PATH, config.DECISION_LOG_PATH)
 app.include_router(goals_router)  # /me/goals: customer-stated intent (goals_api.py)
 app.include_router(customer_router)  # /me/overview, /me/timeline-v2, /me/advisor-requests (customer_api.py)
@@ -254,7 +256,12 @@ def health() -> dict[str, Any]:
 @limiter.limit(config.LOGIN_RATE_LIMIT)
 def login(request: Request, body: LoginRequest) -> LoginResponse:
     # always evaluated (one hash either way): no user enumeration by timing
-    password_ok = auth.verify_password(body.password, admin=body.customer_id == "admin")
+    try:
+        with auth.login_guard():  # global concurrency + throughput cap on PBKDF2
+            password_ok = auth.verify_password(body.password, admin=body.customer_id == "admin")
+    except auth.LoginBusy:
+        raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, "Login temporarily busy, retry shortly",
+                            headers={"Retry-After": "5"}) from None
     if body.customer_id == "admin":
         role: auth.Role = "admin"
         exists = True

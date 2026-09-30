@@ -403,7 +403,7 @@ function renderTimeline(root) {
 }
 
 // ------------------------------------------------------------------ plans
-function renderPlans(root, prefill) {
+function renderPlans(root, prefill, replaceId) {
   load(root, () => api(lq("/me/overview")), (d) => {
     const grid = el("div", "layout-2col");
     const main = el("div", "stack-6");
@@ -445,6 +445,8 @@ function renderPlans(root, prefill) {
           ok.disabled = true; no.disabled = true;
           try {
             await api("/me/goals", { method: "POST", body: { purpose: p.purpose, amount: p.amount, keep_accessible: p.keep_accessible } });
+            // editing: the original goal is removed only after its replacement was saved
+            if (replaceId) { try { await api("/me/goals/" + encodeURIComponent(replaceId), { method: "DELETE" }); } catch (_) { toast(t("save_fail"), "error"); } }
             closePanel();
             toast(t("goal_saved"), "info");
             renderPlans(root);
@@ -470,6 +472,7 @@ function renderPlans(root, prefill) {
         const row = el("div", "");
         row.style.display = "flex"; row.style.gap = "8px";
         const mutate = async (b, prefillText) => {
+          if (prefillText) { renderPlans(root, prefillText, g.id); return; }  // edit: keep the original until confirmed
           row.querySelectorAll("button").forEach((x) => { x.disabled = true; });
           try {
             await api("/me/goals/" + encodeURIComponent(g.id), { method: "DELETE" });

@@ -6,4 +6,5 @@ slowapi==0.1.10
 python-dotenv==1.2.3
 httpx==0.28.1
 google-genai==2.25.0
+google-cloud-firestore==2.33.0  # only imported when STORAGE=firestore
 pytest==9.1.1

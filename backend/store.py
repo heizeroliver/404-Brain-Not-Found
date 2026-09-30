@@ -1,7 +1,10 @@
-"""In-memory state for the demo: customers, feedback, deliveries, decision log.
+"""State for the demo: customers, goals, consents, feedback, deliveries, decision log.
 
-Everything except the decision log lives in memory on purpose: a restart resets
-the demo. The decision log is append-only (memory + JSONL file, git-ignored).
+Goals and consents go through a storage backend (persistence.py, STORAGE=memory|firestore).
+With STORAGE=firestore they are written to Firestore first and the in-memory cache is updated
+only after the write succeeded (StorageError otherwise); goal reads are read-through.
+Feedback, deliveries and the decision log stay in memory in every mode (a restart resets them);
+the decision log is also appended to a JSONL file (git-ignored).
 """
 from __future__ import annotations
 
@@ -13,6 +16,7 @@ from pathlib import Path
 from typing import Any
 
 from engine.models import Consents, Customer, Goal
+from persistence import Backend, get_backend
 
 log = logging.getLogger("foresight.store")
 
@@ -25,11 +29,16 @@ SUPPRESS_DAYS = {"not_now": 14, "not_relevant": 90, "never": 10 ** 6}
 
 MAX_LOG_ENTRIES = 20_000
 MAX_DELIVERIES = 20_000
+MAX_DELIVERIES_PER_CUSTOMER = 200
+MAX_FEEDBACK = 20_000
+MAX_FEEDBACK_PER_CUSTOMER = 200
 
 
 class Store:
-    def __init__(self, customers_path: Path, decision_log_path: Path | None) -> None:
+    def __init__(self, customers_path: Path, decision_log_path: Path | None,
+                 backend: Backend | None = None) -> None:
         self._lock = threading.Lock()
+        self.backend: Backend = backend if backend is not None else get_backend()
         self.customers: dict[str, Customer] = {}
         self.feedback: list[dict[str, Any]] = []
         self.deliveries: list[dict[str, Any]] = []
@@ -37,6 +46,7 @@ class Store:
         self.goals: dict[str, list[Goal]] = {}
         self.decision_log_path = decision_log_path
         self.load_customers(customers_path)
+        self._load_durable()
 
     # -------------------------------------------------------------- customers
     def load_customers(self, path: Path) -> None:
@@ -47,12 +57,28 @@ class Store:
         self.customers = {c["id"]: Customer.model_validate(c) for c in raw["customers"]}
         log.info("Loaded %d customers", len(self.customers))
 
+    def _load_durable(self) -> None:
+        """Warm the cache from the durable backend (no-op in memory mode)."""
+        if not self.backend.durable:
+            return
+        for cid, raw in self.backend.load_all_consents().items():
+            customer = self.customers.get(cid)
+            if customer is not None:
+                try:
+                    customer.consents = Consents.model_validate(raw)
+                except ValueError as exc:
+                    log.warning("Ignoring stored consents for %s: %s", cid, exc)
+        self.goals = {cid: [Goal.model_validate(g) for g in rows]
+                      for cid, rows in self.backend.load_all_goals().items()}
+        log.info("Loaded %d goals from %s", self.goals_count(), self.backend.name)
+
     def get_customer(self, customer_id: str) -> Customer | None:
         return self.customers.get(customer_id)
 
     def set_consents(self, customer_id: str, consents: Consents) -> Consents:
         with self._lock:
             customer = self.customers[customer_id]
+            self.backend.save_consents(customer_id, consents.model_dump(mode="json"))  # first
             customer.consents = consents
             return customer.consents
 
@@ -66,6 +92,13 @@ class Store:
             "ts": (when or datetime.now(timezone.utc)).isoformat(),
         }
         with self._lock:
+            mine = [i for i, fb in enumerate(self.feedback) if fb["customer_id"] == customer_id]
+            if len(mine) >= MAX_FEEDBACK_PER_CUSTOMER:  # bounded per customer: evict the oldest
+                # keep "never" opt-outs (they must keep suppressing) unless nothing else is left
+                evict = next((i for i in mine if self.feedback[i]["action"] != "never"), mine[0])
+                del self.feedback[evict]
+            if len(self.feedback) >= MAX_FEEDBACK:  # bounded globally
+                del self.feedback[: len(self.feedback) - MAX_FEEDBACK + 1]
             self.feedback.append(entry)
         return entry
 
@@ -102,20 +135,35 @@ class Store:
     # ------------------------------------------------------------------ goals
     def add_goal(self, customer_id: str, goal: Goal) -> Goal:
         with self._lock:
-            goals = self.goals.setdefault(customer_id, [])
-            if len(goals) >= MAX_GOALS:
+            if self.backend.durable:
+                current = self._refresh_goals(customer_id)
+            else:
+                current = self.goals.get(customer_id, [])
+            if len(current) >= MAX_GOALS:
                 raise ValueError(f"At most {MAX_GOALS} goals per customer")
-            goals.append(goal)
+            self.backend.save_goal(customer_id, goal.model_dump(mode="json"))  # raises StorageError
+            self.goals.setdefault(customer_id, []).append(goal)  # cache only after the write
             return goal
 
+    def _refresh_goals(self, customer_id: str) -> list[Goal]:
+        goals = [Goal.model_validate(g) for g in self.backend.list_goals(customer_id)]
+        self.goals[customer_id] = goals
+        return goals
+
     def list_goals(self, customer_id: str) -> list[Goal]:
+        if self.backend.durable:  # read-through: other instances may have written
+            with self._lock:
+                return list(self._refresh_goals(customer_id))
         return list(self.goals.get(customer_id, []))
 
     def delete_goal(self, customer_id: str, goal_id: str) -> Goal | None:
         with self._lock:
+            if self.backend.durable:
+                self._refresh_goals(customer_id)
             goals = self.goals.get(customer_id, [])
             for i, g in enumerate(goals):
                 if g.id == goal_id:
+                    self.backend.delete_goal(customer_id, goal_id)  # raises StorageError
                     return goals.pop(i)
         return None
 
@@ -129,6 +177,9 @@ class Store:
     # ------------------------------------------------------------- deliveries
     def record_delivery(self, customer_id: str, moment_type: str, today: date) -> None:
         with self._lock:
+            mine = [i for i, d in enumerate(self.deliveries) if d["customer_id"] == customer_id]
+            if len(mine) >= MAX_DELIVERIES_PER_CUSTOMER:
+                del self.deliveries[mine[0]]
             if len(self.deliveries) >= MAX_DELIVERIES:
                 del self.deliveries[: len(self.deliveries) - MAX_DELIVERIES + 1]
             self.deliveries.append({"customer_id": customer_id, "moment_type": moment_type,
