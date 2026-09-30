@@ -44,6 +44,8 @@ from engine.voice import synthesize
 from goals_api import router as goals_router
 from customer_api import router as customer_router
 from control_api import router as control_router
+from talk_api import router as talk_router
+from voice_api import router as voice_router
 from store import Store
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -53,6 +55,8 @@ app = FastAPI(title="Kate Foresight API", version="0.1.0", docs_url=None, redoc_
 store = Store(config.CUSTOMERS_PATH, config.DECISION_LOG_PATH)
 app.include_router(goals_router)  # /me/goals: customer-stated intent (goals_api.py)
 app.include_router(customer_router)  # /me/overview, /me/timeline-v2, /me/advisor-requests (customer_api.py)
+app.include_router(talk_router)  # /me/talk: Kate Talk conversation (talk_api.py)
+app.include_router(voice_router)  # /me/talk/voice: push-to-talk (voice_api.py)
 app.include_router(control_router)  # /admin/* control room v2 (control_api.py)
 
 limiter = Limiter(key_func=get_remote_address, default_limits=[config.GLOBAL_RATE_LIMIT])
@@ -74,7 +78,8 @@ async def security_headers(request: Request, call_next):  # type: ignore[no-unty
         length = request.headers.get("content-length")
         if length is None or not length.isdigit():
             return JSONResponse(status_code=411, content={"detail": "Content-Length required"})
-        if int(length) > config.MAX_BODY_BYTES:
+        limit = VOICE_MAX_BYTES if request.url.path == "/me/talk/transcribe" else config.MAX_BODY_BYTES
+        if int(length) > limit:
             return JSONResponse(status_code=413, content={"detail": "Request body too large"})
     response = await call_next(request)
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
@@ -192,6 +197,7 @@ def _now() -> str:
 
 
 AppLanguage = Literal["nl", "en", "fr"]
+VOICE_MAX_BYTES = 1_000_000  # one short push-to-talk clip; every other route keeps the 64 KB cap
 VOICE_AGENT_ID = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 LANG_QUERY = Query("nl", description="App language: Dutch (default), English or French")
 
