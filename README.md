@@ -30,6 +30,14 @@ KBC's five questions: which signals help us understand what customers need; how 
 | 4. How can it work across products, services and channels? | One decision layer over banking, savings, investing (Bolero), pension saving and insurance. The engine picks the channel: in-app card, Kate voice note, or advisor call. New products plug in as a rule module or a world rule. | Marc's company car goes to an advisor; Rita gets a callback |
 | 5. How can you create impact for millions at the same time? | A new world rule runs against every customer twin in seconds and reports who is affected and by how much. The same rules run as a nightly batch plus real-time triggers. Frequency caps and feedback keep it helpful, not noisy. | Control room: paste a rule, click Run against all customers |
 
+## Kate Talk (AIR-inspired conversation)
+
+Tab **Praat met Kate** answers four supported question types from the customer's own data: where the money went (exact period, categories, income and pension saving kept separate), what is coming in the next 90 days (contract dates, legal dates and estimates labelled as such), "keep €8,000 for my renovation" (proposal with an editable amount, explicit confirm, allocation and recommendation update, no money moves) and why Kate recommends something (evidence, current goals, assumptions). Deterministic intent routing and templates, not open conversation; every number comes from the backend. Push-to-talk (ElevenLabs speech-to-text and text-to-speech) appears only when `ELEVENLABS_API_KEY` and voice ids are set; it was tested with mocks, not against the live service.
+
+| | |
+|---|---|
+| ![Spending](screenshots/talk-spending-1440.png) | ![Goal saved](screenshots/talk-goal-saved-1440.png) |
+
 ## Screenshots (current UI)
 
 | | |
@@ -56,6 +64,7 @@ cd 404-Brain-Not-Found
 `run.sh` creates `.venv`, installs `backend/requirements.lock`, writes `backend/.env` with a generated JWT secret and demo password (printed once, stored as `DEMO_PASSWORD`), then starts the API on :8000 and the app on :5173. Open **http://localhost:5173**, click a persona card, enter the demo password, click **Open de app**.
 
 **Demo path (3 minutes):**
+0. Tab **Praat met Kate**: ask "Waar ging mijn geld de voorbije drie maanden?", "Wat komt er de komende 90 dagen?", then "Hou €8.000 beschikbaar voor mijn verbouwing" and **Bevestig**.
 1. Log in as **lien** (NL). Overview shows "Spaargeld dat niets doet" with €13.700 above a modeled six-month buffer. Click **Waarom?**: reasons, dates, source, technical details.
 2. Click **Plan je spaargeld** (My plans). Type `Ik wil €8.000 beschikbaar houden voor mijn verbouwing`, click **Vraag Kate**, then **Bevestig**. The chart shows €12.300 buffer, €8.000 renovation, €5.700 remaining; the overview recommendation updates.
 3. Log out, log in as **marc**. On the company-car moment click **Vraag een adviseur**, confirm. A prototype request id (AR-…) appears.
