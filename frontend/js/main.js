@@ -2,10 +2,11 @@
 import { state, t, api, el, clear, icon, navigate, onLanguageChange, setLang, toast, errorState } from "./core.js";
 
 const $ = (id) => document.getElementById(id);
-const CUSTOMER_SECTIONS = ["overview", "timeline", "plans", "data"];
+const CUSTOMER_SECTIONS = ["overview", "talk", "timeline", "plans", "data"];
 const CONTROL_TABS = ["overview", "moments", "queue", "rules", "audit"];
 const NAV = [
   { key: "overview", label: "nav_overview", icon: "home" },
+  { key: "talk", label: "nav_talk", icon: "mic" },
   { key: "timeline", label: "nav_timeline", icon: "calendar" },
   { key: "plans", label: "nav_plans", icon: "target" },
   { key: "data", label: "nav_data", icon: "shield" },
@@ -213,14 +214,15 @@ async function show(seq, root, view, sub, params) {
   clear(root);
   root.className = view === "control" ? "view-control" : view === "customer" ? "view-customer" : "view-login";
   if (view === "login") { removeCustomerNav(); removeAssistant(); renderLogin(root); focusMain(root); return; }
-  if (view === "customer") { renderCustomerNav(sub); loadAssistant(); } else { removeCustomerNav(); removeAssistant(); }
+  if (view === "customer") { renderCustomerNav(sub); removeAssistant(); } else { removeCustomerNav(); removeAssistant(); }
   const loading = el("div", "container"); loading.appendChild(el("div", "skeleton skeleton-block")); loading.setAttribute("aria-busy", "true");
   root.appendChild(loading);
   try {
-    const mod = view === "customer" ? await import("./customer.js") : await import("./control.js");
+    const mod = view === "customer" ? (sub === "talk" ? await import("./talk.js") : await import("./customer.js"))
+      : await import("./control.js");
     if (seq !== routeSeq) return;
     clear(root);
-    const fn = view === "customer" ? mod.renderCustomer : mod.renderControl;
+    const fn = view === "customer" ? (sub === "talk" ? mod.renderTalk : mod.renderCustomer) : mod.renderControl;
     if (typeof fn !== "function") throw new Error("module has no render function");
     await (view === "customer" ? fn(root, sub) : fn(root, sub, params || {}));
   } catch (e) {

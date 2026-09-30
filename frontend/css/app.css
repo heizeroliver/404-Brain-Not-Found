@@ -243,3 +243,14 @@ body.has-bottom-nav #toast-root { bottom: 88px; }
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
   .skeleton::after { display: none; }
 }
+
+/* Consistent breathing room between stacked cards (block containers only; grids use gap). */
+.stack-1 > * + * { margin-top: var(--s1); }
+.stack-2 > * + * { margin-top: var(--s2); }
+.stack-3 > * + * { margin-top: var(--s3); }
+.stack-4 > * + * { margin-top: var(--s5); }
+.stack-5 > * + * { margin-top: var(--s6); }
+.layout-2col > * > * + * { margin-top: var(--s5); }
+.grid-metrics { gap: var(--s4); }
+@media (max-width: 599px) { .layout-2col > * > * + * { margin-top: var(--s4); } }
+.btn + .btn, .btn-quiet + .btn-quiet { margin-top: 0 !important; }

@@ -1,5 +1,5 @@
 // Accessible SVG charts, no library. Built with createElementNS and textContent only.
-import { el, t, fmtEur, fmtNum } from "./core.js";
+import { el, t, fmtEur, fmtNum, fmtDate, registerStrings } from "./core.js";
 
 const NS = "http://www.w3.org/2000/svg";
 let uid = 0;
@@ -165,5 +165,110 @@ function barChart(rows, { label, unit, onSelect, selected, showPct }) {
   if (showPct) fig.appendChild(el("p", "chart-total num", `${t("chart_total")}: ${fmtValue(total, unit)}`));
   const headers = showPct ? [t("chart_item"), t("chart_value"), t("chart_share")] : [t("chart_item"), t("chart_value")];
   fig.appendChild(hiddenTable(label, headers, data.map((d) => showPct ? [d.label, fmtValue(d.v, unit), pct(d.v, total) + "%"] : [d.label, fmtValue(d.v, unit)])));
+  return fig;
+}
+
+// ------------------------------------------------------------------ talk charts (categoryBars, miniTimeline)
+registerStrings({
+  nl: { chart_largest: "grootste categorie", chart_date: "Datum", chart_kind: "Soort", chart_basis: "Basis", chart_title: "Omschrijving", chart_empty: "Geen gegevens.",
+    tk_expected_payment: "Verwachte betaling", tk_estimate: "Schatting", tk_deadline: "Deadline", tk_renewal: "Verlenging", tk_effective_date: "Ingangsdatum", tk_reminder_window: "Herinneringsperiode" },
+  en: { chart_largest: "largest category", chart_date: "Date", chart_kind: "Kind", chart_basis: "Basis", chart_title: "Description", chart_empty: "No data.",
+    tk_expected_payment: "Expected payment", tk_estimate: "Estimate", tk_deadline: "Deadline", tk_renewal: "Renewal", tk_effective_date: "Effective date", tk_reminder_window: "Reminder window" },
+  fr: { chart_largest: "plus grande catégorie", chart_date: "Date", chart_kind: "Type", chart_basis: "Base", chart_title: "Description", chart_empty: "Aucune donnée.",
+    tk_expected_payment: "Paiement attendu", tk_estimate: "Estimation", tk_deadline: "Échéance", tk_renewal: "Renouvellement", tk_effective_date: "Date d'effet", tk_reminder_window: "Période de rappel" },
+});
+
+// rows: [{ key, label, value }] drawn in the given order; total defaults to the sum of rows.
+export function categoryBars(rows = [], { label, total, unit = "eur" } = {}) {
+  const data = (rows || []).map((r) => ({ ...r, label: String(r.label ?? r.key ?? ""), v: safe(r.value) }));
+  const sum = data.reduce((a, b) => a + b.v, 0);
+  const tot = Number.isFinite(Number(total)) && Number(total) > 0 ? Number(total) : sum;
+  const max = Math.max(...data.map((d) => d.v), 0);
+  const topIdx = data.reduce((best, d, i) => (d.v > (best < 0 ? -1 : data[best].v) ? i : best), -1);
+  const fig = figure(label);
+  fig.classList.add("chart-category");
+  const top = topIdx >= 0 ? data[topIdx] : null;
+  const summary = (label ? label + ": " : "") + `${t("chart_total").toLowerCase()} ${fmtValue(tot, unit)}` +
+    (top && top.v > 0 ? `; ${t("chart_largest")} ${top.label} ${fmtValue(top.v, unit)} (${pct(top.v, tot)}%)` : "");
+  const W = 600, rowH = 30, gap = 6, labelW = 170, valueW = 130;
+  const barMax = W - labelW - valueW - 12;
+  const nRows = data.length + 1; // + total row
+  const H = nRows * (rowH + gap);
+  const svg = svgRoot(W, H, summary);
+  svg.style.maxWidth = "100%";
+  data.forEach((d, i) => {
+    const y = i * (rowH + gap);
+    const w = max > 0 ? (d.v / max) * barMax : 0;
+    const g = s("g");
+    const lab = d.label.length > 24 ? d.label.slice(0, 23) + "…" : d.label;
+    g.appendChild(s("text", { x: 0, y: y + rowH / 2 + 5, "font-size": 14, fill: "#0F1B2D" }, lab));
+    g.appendChild(s("rect", { x: labelW, y: y + 5, width: barMax, height: rowH - 10, rx: 4, fill: "#F1F5F9" }));
+    g.appendChild(s("rect", { x: labelW, y: y + 5, width: Math.max(w, d.v > 0 ? 2 : 0).toFixed(2), height: rowH - 10, rx: 4, fill: i === topIdx ? "#00ACEF" : "#0B325E" }));
+    const valTxt = `${fmtValue(d.v, unit)} · ${pct(d.v, tot)}%`;
+    g.appendChild(s("text", { x: W - 4, y: y + rowH / 2 + 5, "text-anchor": "end", "font-size": 14, "font-weight": 600, fill: "#0F1B2D" }, valTxt));
+    g.appendChild(s("title", {}, `${d.label}: ${valTxt}`));
+    svg.appendChild(g);
+  });
+  const yT = data.length * (rowH + gap);
+  svg.appendChild(s("line", { x1: 0, x2: W, y1: yT + 1, y2: yT + 1, stroke: "#CBD5E1", "stroke-width": 1 }));
+  svg.appendChild(s("text", { x: 0, y: yT + rowH / 2 + 6, "font-size": 14, "font-weight": 700, fill: "#0F1B2D" }, t("chart_total")));
+  svg.appendChild(s("text", { x: W - 4, y: yT + rowH / 2 + 6, "text-anchor": "end", "font-size": 14, "font-weight": 700, fill: "#0F1B2D" }, fmtValue(tot, unit)));
+  fig.appendChild(svg);
+  const tRows = data.map((d) => [d.label, fmtValue(d.v, unit), pct(d.v, tot) + "%"]);
+  tRows.push([t("chart_total"), fmtValue(tot, unit), tot > 0 ? "100%" : "0%"]);
+  fig.appendChild(hiddenTable(label, [t("chart_item"), t("chart_value"), t("chart_share")], tRows));
+  return fig;
+}
+
+// Kind marker: distinct shapes so color is never the only signal.
+function kindMarker(kind) {
+  const svg = s("svg", { viewBox: "0 0 12 12", width: 12, height: 12, "aria-hidden": "true", focusable: "false", class: "tl-marker" });
+  const navy = "#0B325E", blue = "#00ACEF";
+  switch (kind) {
+    case "deadline": svg.appendChild(s("rect", { x: 1.5, y: 1.5, width: 9, height: 9, fill: navy })); break;
+    case "renewal": svg.appendChild(s("polygon", { points: "6,0.5 11.5,6 6,11.5 0.5,6", fill: blue })); break;
+    case "effective_date": svg.appendChild(s("polygon", { points: "6,1 11.5,11 0.5,11", fill: navy })); break;
+    case "reminder_window": svg.appendChild(s("circle", { cx: 6, cy: 6, r: 4.25, fill: "none", stroke: blue, "stroke-width": 2 })); break;
+    case "estimate": svg.appendChild(s("circle", { cx: 6, cy: 6, r: 5, fill: "#fff", stroke: "#475569", "stroke-width": 1.5, "stroke-dasharray": "2 1.5" })); break;
+    default: svg.appendChild(s("circle", { cx: 6, cy: 6, r: 5, fill: blue })); // expected_payment
+  }
+  return svg;
+}
+
+// items: [{ date, kind, title, basis, basis_label }]; opts.empty = text when there are no items.
+export function miniTimeline(items = [], { label, empty } = {}) {
+  const list = Array.isArray(items) ? items : [];
+  const fig = figure(label);
+  fig.classList.add("chart-timeline");
+  fig.style.maxWidth = "100%";
+  if (!list.length) {
+    fig.appendChild(el("p", "muted small", empty || t("chart_empty")));
+    return fig;
+  }
+  const ul = el("ul", "mini-timeline");
+  ul.style.cssText = "list-style:none;margin:0;padding:0;max-width:100%;";
+  list.forEach((it) => {
+    const kindTxt = t("tk_" + (it.kind || "expected_payment"));
+    const li = el("li", "tl-item");
+    li.style.cssText = "display:grid;grid-template-columns:auto 14px 1fr;gap:4px 8px;align-items:baseline;padding:4px 0;border-bottom:1px solid #E2E8F0;min-width:0;";
+    const time = el("time", "tl-date num", fmtDate(it.date, "short"));
+    if (it.date) time.dateTime = String(it.date);
+    time.style.cssText = "font-weight:600;white-space:nowrap;min-width:3.5em;";
+    const mk = el("span", "tl-kind");
+    mk.style.cssText = "display:inline-flex;align-self:center;";
+    mk.title = kindTxt;
+    mk.appendChild(kindMarker(it.kind));
+    const body = el("span", "tl-body");
+    body.style.cssText = "min-width:0;overflow-wrap:anywhere;";
+    body.appendChild(el("span", "sr-only", kindTxt + ": "));
+    body.appendChild(el("span", "tl-title", it.title || ""));
+    if (it.basis_label) {
+      const b = el("span", "tl-basis muted small", " · " + it.basis_label);
+      body.appendChild(b);
+    }
+    li.append(time, mk, body);
+    ul.appendChild(li);
+  });
+  fig.appendChild(ul);
   return fig;
 }
