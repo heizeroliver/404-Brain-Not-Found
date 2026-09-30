@@ -1,6 +1,7 @@
 // "Praat met Kate" strings (nl default, en, fr). Registered by talk.js at load.
 export default {
   nl: {
+    tk_check_transcript: "Controleer de tekst en druk op Enter om te versturen.",
     tk_title: "Praat met Kate",
     tk_sub: "AI-assistent · antwoorden op basis van je eigen gegevens en regels",
     tk_note: "Kate beantwoordt vaste soorten vragen (uitgaven, wat eraan komt, doelen, waarom). Geen vrij gesprek.",
@@ -24,6 +25,7 @@ export default {
     tk_basis_contract: "contract", tk_basis_legal: "wettelijk", tk_basis_estimate_from_history: "schatting op basis van historiek", tk_basis_customer_goal: "jouw doel",
   },
   en: {
+    tk_check_transcript: "Check the text and press Enter to send.",
     tk_title: "Talk to Kate",
     tk_sub: "AI assistant · answers based on your own data and rules",
     tk_note: "Kate answers fixed question types (spending, what is coming, goals, why). Not an open conversation.",
@@ -47,6 +49,7 @@ export default {
     tk_basis_contract: "contract", tk_basis_legal: "legal", tk_basis_estimate_from_history: "estimate based on history", tk_basis_customer_goal: "your goal",
   },
   fr: {
+    tk_check_transcript: "Vérifiez le texte et appuyez sur Entrée pour envoyer.",
     tk_title: "Parler à Kate",
     tk_sub: "Assistante IA · réponses basées sur vos propres données et règles",
     tk_note: "Kate répond à des types de questions fixes (dépenses, échéances, objectifs, pourquoi). Pas de conversation libre.",
