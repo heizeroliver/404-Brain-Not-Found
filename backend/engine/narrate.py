@@ -38,9 +38,9 @@ SYSTEM_PROMPT = (
 )
 
 KIND_LABEL = {
-    "nl": {"home": "woning", "car": "auto", "family": "familiale", "hospitalisation": "hospitalisatie"},
-    "fr": {"home": "habitation", "car": "auto", "family": "familiale", "hospitalisation": "hospitalisation"},
-    "en": {"home": "home", "car": "car", "family": "family", "hospitalisation": "hospitalisation"},
+    "nl": {"home": "woningverzekering", "car": "autoverzekering", "family": "familiale verzekering", "hospitalisation": "hospitalisatieverzekering"},
+    "fr": {"home": "assurance habitation", "car": "assurance auto", "family": "assurance RC familiale", "hospitalisation": "assurance hospitalisation"},
+    "en": {"home": "home insurance", "car": "car insurance", "family": "family liability insurance", "hospitalisation": "hospitalisation insurance"},
 }
 FUEL_LABEL = {
     "nl": {"diesel": "diesel", "petrol": "benzine", "hybrid": "hybride", "electric": "elektrisch"},
@@ -48,161 +48,176 @@ FUEL_LABEL = {
     "en": {"diesel": "diesel", "petrol": "petrol", "hybrid": "hybrid", "electric": "electric"},
 }
 DUTY_LOCAL = {
-    "nl": {"flanders": "2% registratierechten in Vlaanderen", "wallonia": "3% registratierechten in Wallonië",
-           "brussels": "een abattement van €200.000 in Brussel"},
-    "fr": {"flanders": "2 % de droits d'enregistrement en Flandre", "wallonia": "3 % de droits d'enregistrement en Wallonie",
-           "brussels": "un abattement de €200.000 à Bruxelles"},
-    "en": {"flanders": "2% registration duty in Flanders", "wallonia": "3% registration duty in Wallonia",
-           "brussels": "a €200,000 abattement in Brussels"},
+    "nl": {"flanders": "slechts 2% registratierechten in Vlaanderen", "wallonia": "3% registratierechten in Wallonië", "brussels": "een abattement van €200.000 in Brussel"},
+    "fr": {"flanders": "seulement 2 % de droits d'enregistrement en Flandre", "wallonia": "3 % de droits d'enregistrement en Wallonie", "brussels": "un abattement de 200 000 € à Bruxelles"},
+    "en": {"flanders": "just 2% registration duty in Flanders", "wallonia": "3% registration duty in Wallonia", "brussels": "a €200,000 registration-duty allowance in Brussels"},
 }
 
 # message / why / cta per moment type and language. Placeholders come from Moment.facts.
 TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     "holiday_pay": {
-        "nl": {"message": "Hallo {first_name}, rond {expected_date} verwacht je ongeveer €{amount} vakantiegeld van "
-                          "{employer}. Wil je nu al kiezen wat ermee gebeurt: sparen, een termijnrekening of een beleggingsplan?",
-               "why": "Je maandelijkse loon van {employer} en het vakantiegeld van vorig jaar maken deze inschatting mogelijk.",
-               "cta": "Laat Kate een plan voorbereiden"},
-        "fr": {"message": "Bonjour {first_name}, vers le {expected_date} vous devriez recevoir environ €{amount} de pécule "
-                          "de vacances de {employer}. Voulez-vous déjà choisir quoi en faire : épargne, compte à terme ou plan d'investissement ?",
-               "why": "Votre salaire mensuel de {employer} et le pécule de l'an dernier permettent cette estimation.",
-               "cta": "Laisser Kate préparer un plan"},
-        "en": {"message": "Hi {first_name}, around {expected_date} you should receive about €{amount} of holiday pay from "
-                          "{employer}. Want to decide now what happens with it: savings, a term account or an investment plan?",
-               "why": "Your monthly salary from {employer} and last year's holiday pay make this estimate possible.",
-               "cta": "Let Kate prepare a plan"},
+        "nl": {"message": "Dag {first_name}, rond {expected_date} verwacht je ongeveer €{amount} vakantiegeld van {employer}. Wil je nu"
+                          " al kiezen wat je ermee doet: sparen, een termijnrekening of een beleggingsplan?",
+               "why": "Gebaseerd op je maandloon van {employer} en je vakantiegeld van vorig jaar.",
+               "cta": "Laat Kate een plan voorstellen"},
+        "fr": {"message": "Bonjour {first_name}, vers le {expected_date}, {employer} devrait vous verser environ {amount} € de pécule "
+                          "de vacances. Souhaitez-vous déjà choisir sa destination : épargne, compte à terme ou plan d'investissement ?",
+               "why": "Estimation basée sur votre salaire mensuel chez {employer} et votre pécule de vacances de l'an dernier.",
+               "cta": "Demander un plan à Kate"},
+        "en": {"message": "Hi {first_name}, around {expected_date} you can expect about €{amount} in holiday pay from {employer}. Would"
+                          " you like to decide now what to do with it: savings, a term account or an investment plan?",
+               "why": "Based on your monthly salary from {employer} and last year's holiday pay.",
+               "cta": "Let Kate suggest a plan"},
     },
     "year_end_bonus_pension_topup": {
-        "nl": {"message": "In december verwacht je een eindejaarspremie van ongeveer €{bonus}. Je pensioensparen staat op "
-                          "€{ytd} van het plafond van €{ceiling}: nog €{room} ruimte vóór 31 december, goed voor {relief_pct}% belastingvermindering.",
-               "why": "Gebaseerd op je eindejaarspremie van vorig jaar en je pensioenspaarbijdragen van dit jaar.",
+        "nl": {"message": "In december verwacht je een eindejaarspremie van ongeveer €{bonus}. Voor pensioensparen stortte je dit jaar "
+                          "al €{ytd} (plafond €{ceiling}). Na je geplande maandstortingen kan je vóór 31 december nog €{room} "
+                          "bijstorten, met {relief_pct}% belastingvermindering.",
+               "why": "Gebaseerd op je vorige eindejaarspremie (of je maandloon) en je pensioenspaarstortingen van dit jaar.",
                "cta": "Bijstorting voorbereiden"},
-        "fr": {"message": "En décembre, vous attendez une prime de fin d'année d'environ €{bonus}. Votre épargne-pension est à "
-                          "€{ytd} sur un plafond de €{ceiling} : il reste €{room} à verser avant le 31 décembre, avec {relief_pct} % de réduction d'impôt.",
-               "why": "Basé sur votre prime de l'an dernier et vos versements d'épargne-pension de cette année.",
+        "fr": {"message": "En décembre, vous devriez recevoir une prime de fin d'année d'environ {bonus} €. Vous avez déjà versé {ytd} "
+                          "€ en épargne-pension cette année (plafond {ceiling} €). Après vos versements mensuels prévus, vous pouvez "
+                          "encore verser {room} € avant le 31 décembre, avec {relief_pct} % de réduction d'impôt.",
+               "why": "Basé sur votre dernière prime de fin d'année (ou votre salaire mensuel) et vos versements d'épargne-pension "
+                      "de cette année.",
                "cta": "Préparer le versement"},
-        "en": {"message": "In December you expect a year-end bonus of about €{bonus}. Your pension saving stands at €{ytd} of "
-                          "the €{ceiling} ceiling: €{room} of room before 31 December, worth {relief_pct}% tax relief.",
-               "why": "Based on last year's bonus and this year's pension-saving contributions.",
-               "cta": "Prepare the top-up"},
+        "en": {"message": "In December you can expect a year-end bonus of about €{bonus}. You've already paid €{ytd} into pension "
+                          "savings this year (ceiling €{ceiling}). After your planned monthly payments, you can still add €{room} "
+                          "before 31 December, with {relief_pct}% tax relief.",
+               "why": "Based on your last year-end bonus (or monthly salary) and this year's pension savings payments.",
+               "cta": "Prepare a top-up"},
     },
     "insurance_renewal_increase": {
-        "nl": {"message": "Je {kind_label}verzekering wordt over {days} dagen vernieuwd. De premie gaat van €{premium} naar "
-                          "€{new_premium} (+{pct}%). Wil je twee alternatieven zien, of behoud je de huidige formule?",
-               "why": "De vervaldag {renewal_date} en de nieuwe premie staan in je polis.",
+        "nl": {"message": "Je {kind_label} wordt over {days} dagen verlengd. De premie stijgt van €{premium} naar €{new_premium} "
+                          "(+{pct}%). Zal ik twee alternatieven tonen, of hou je liever je huidige formule?",
+               "why": "Je polis vermeldt de vervaldag ({renewal_date}) en de nieuwe premie.",
                "cta": "Toon twee opties"},
-        "fr": {"message": "Votre assurance {kind_label} est renouvelée dans {days} jours. La prime passe de €{premium} à "
-                          "€{new_premium} (+{pct} %). Voulez-vous voir deux alternatives, ou garder la formule actuelle ?",
-               "why": "L'échéance du {renewal_date} et la nouvelle prime figurent dans votre police.",
+        "fr": {"message": "Votre {kind_label} sera renouvelée dans {days} jours. La prime passe de {premium} € à {new_premium} € "
+                          "(+{pct} %). Voulez-vous voir deux alternatives, ou préférez-vous garder votre formule actuelle ?",
+               "why": "Votre police mentionne l'échéance du {renewal_date} et la nouvelle prime.",
                "cta": "Voir deux options"},
-        "en": {"message": "Your {kind_label} insurance renews in {days} days. The premium goes from €{premium} to "
-                          "€{new_premium} (+{pct}%). Want to see two alternatives, or keep the current formula?",
-               "why": "The renewal date {renewal_date} and the new premium are in your policy.",
+        "en": {"message": "Your {kind_label} renews in {days} days. The premium rises from €{premium} to €{new_premium} (+{pct}%). "
+                          "Would you like to see two alternatives, or keep your current cover?",
+               "why": "Your policy shows the renewal date ({renewal_date}) and the new premium.",
                "cta": "Show two options"},
     },
     "term_account_maturity": {
-        "nl": {"message": "Je termijnrekening van €{amount} vervalt op {maturity_date}, over {days} dagen. Zonder keuze komt "
-                          "het geld terug op je zichtrekening en brengt het niets op. Wil je vernieuwen of drie veilige opties zien?",
-               "why": "De vervaldatum van {maturity_date} staat in je contract.",
+        "nl": {"message": "Je termijnrekening van €{amount} vervalt op {maturity_date}, over {days} dagen. Kies je niets, dan gaat het "
+                          "geld naar je zichtrekening, waar het niets opbrengt. Wil je vernieuwen, of zal ik drie veilige opties tonen?",
+               "why": "Je contract vermeldt {maturity_date} als vervaldatum.",
                "cta": "Kies wat ermee gebeurt"},
-        "fr": {"message": "Votre compte à terme de €{amount} arrive à échéance le {maturity_date}, dans {days} jours. Sans choix, "
-                          "l'argent revient sur votre compte à vue sans rapporter. Renouveler ou voir trois options sûres ?",
-               "why": "L'échéance du {maturity_date} figure dans votre contrat.",
+        "fr": {"message": "Votre compte à terme de {amount} € arrive à échéance le {maturity_date}, dans {days} jours. Sans choix de "
+                          "votre part, l'argent revient sur votre compte à vue, où il ne rapporte rien. Le renouveler, ou voir trois "
+                          "options sûres ?",
+               "why": "Votre contrat mentionne l'échéance du {maturity_date}.",
                "cta": "Choisir la suite"},
-        "en": {"message": "Your term account of €{amount} matures on {maturity_date}, in {days} days. Without a choice the "
-                          "money returns to your current account and earns nothing. Renew, or see three safe options?",
-               "why": "The maturity date {maturity_date} is in your contract.",
-               "cta": "Choose what happens"},
+        "en": {"message": "Your term account of €{amount} matures on {maturity_date}, in {days} days. If you don't choose, the money "
+                          "goes back to your current account, where it earns nothing. Would you like to renew, or see three safe "
+                          "options?",
+               "why": "Your contract shows {maturity_date} as the maturity date.",
+               "cta": "Decide what happens next"},
     },
     "energy_bill_spike": {
-        "nl": {"message": "Je energiefacturen liggen de laatste drie maanden op gemiddeld €{recent}, tegenover €{base} ervoor "
-                          "(+{pct}%). Zullen we samen je budget en je energiecontract bekijken?",
-               "why": "Vergelijking van je eigen energiefacturen van de voorbije maanden.",
+        "nl": {"message": "Je energiefacturen bedroegen de voorbije drie maanden gemiddeld €{recent}, tegenover €{base} daarvoor "
+                          "(+{pct}%). Zullen we samen naar je budget en je energiecontract kijken?",
+               "why": "Een vergelijking van je eigen energiefacturen van de voorbije maanden.",
                "cta": "Bekijk mijn energiekosten"},
-        "fr": {"message": "Vos factures d'énergie atteignent en moyenne €{recent} ces trois derniers mois, contre €{base} "
-                          "avant (+{pct} %). On regarde ensemble votre budget et votre contrat d'énergie ?",
-               "why": "Comparaison de vos propres factures d'énergie des derniers mois.",
-               "cta": "Voir mes coûts d'énergie"},
-        "en": {"message": "Your energy bills averaged €{recent} over the last three months, against €{base} before "
-                          "(+{pct}%). Shall we look at your budget and your energy contract together?",
-               "why": "A comparison of your own energy invoices over the past months.",
-               "cta": "Look at my energy costs"},
+        "fr": {"message": "Ces trois derniers mois, vos factures d'énergie s'élèvent en moyenne à {recent} €, contre {base} € "
+                          "auparavant (+{pct} %). Voulez-vous que nous regardions ensemble votre budget et votre contrat d'énergie ?",
+               "why": "Une comparaison de vos propres factures d'énergie des derniers mois.",
+               "cta": "Voir mes frais d'énergie"},
+        "en": {"message": "Your energy bills have averaged €{recent} over the last three months, compared with €{base} before "
+                          "(+{pct}%). Shall we look at your budget and energy contract together?",
+               "why": "A comparison of your own energy bills over recent months.",
+               "cta": "View my energy costs"},
     },
     "payment_protection": {
-        "nl": {"message": "{first_name}, we hebben een betaling van €{amount} tegengehouden: de naam '{payee_shown}' klopt niet "
-                          "met de rekeninghouder. Een bank vraagt nooit om geld te verplaatsen. Een collega belt je vandaag terug.",
-               "why": "De naamcontrole van de begunstigde gaf een afwijking op {alert_date}.",
+        "nl": {"message": "{first_name}, we hebben een betaling van €{amount} tegengehouden: de naam '{payee_shown}' komt niet overeen "
+                          "met de rekeninghouder. Een bank vraagt je nooit om geld te verplaatsen. Een collega belt je vandaag nog "
+                          "terug.",
+               "why": "Bij de controle van de naam van de begunstigde op {alert_date} bleek die niet te kloppen.",
                "cta": "Bel me terug"},
-        "fr": {"message": "{first_name}, nous avons retenu un paiement de €{amount} : le nom « {payee_shown} » ne correspond pas "
-                          "au titulaire du compte. Une banque ne demande jamais de déplacer votre argent. Un collègue vous rappelle aujourd'hui.",
-               "why": "La vérification du nom du bénéficiaire a signalé une différence le {alert_date}.",
+        "fr": {"message": "{first_name}, nous avons retenu un paiement de {amount} € : le nom « {payee_shown} » ne correspond pas au "
+                          "titulaire du compte. Une banque ne vous demandera jamais de déplacer votre argent. Un collègue vous rappelle"
+                          " aujourd'hui.",
+               "why": "Le {alert_date}, la vérification du nom du bénéficiaire a révélé une différence.",
                "cta": "Rappelez-moi"},
-        "en": {"message": "{first_name}, we held a payment of €{amount}: the name '{payee_shown}' does not match the account "
-                          "holder. A bank never asks you to move money. A colleague will call you back today.",
+        "en": {"message": "{first_name}, we held a payment of €{amount}: the name '{payee_shown}' doesn't match the account holder. A "
+                          "bank will never ask you to move money. A colleague will call you back today.",
                "why": "The payee name check flagged a mismatch on {alert_date}.",
                "cta": "Call me back"},
     },
     "idle_cash": {
-        "nl": {"message": "Op je spaarrekening staat €{balance}, al {months} maanden ruim boven een buffer van zes maanden. "
-                          "Zo'n €{idle} kan misschien meer opbrengen. Drie veilige opties bekijken, zonder verplichting?",
-               "why": "Je spaarsaldo bleef {months} maanden boven zes keer je netto maandinkomen.",
+        "nl": {"message": "Op je spaarrekening staat €{balance}: al {months} maanden ruim meer dan een buffer van zes maanden inkomen. "
+                          "Zo'n €{idle} zou meer kunnen opbrengen. Zal ik drie veilige opties tonen, zonder verplichting?",
+               "why": "Je spaarsaldo lag {months} maanden lang boven zes keer je nettomaandinkomen.",
                "cta": "Bekijk drie veilige opties"},
-        "fr": {"message": "Votre compte d'épargne affiche €{balance}, depuis {months} mois bien au-dessus d'une réserve de six "
-                          "mois. Environ €{idle} pourrait rapporter davantage. Trois options sûres, sans engagement ?",
-               "why": "Votre solde d'épargne est resté {months} mois au-dessus de six fois votre revenu mensuel net.",
+        "fr": {"message": "Votre compte d'épargne affiche {balance} €, soit depuis {months} mois bien plus qu'une réserve de six mois "
+                          "de revenus. Environ {idle} € pourraient vous rapporter davantage. Voulez-vous voir trois options sûres, sans"
+                          " engagement ?",
+               "why": "Depuis {months} mois, votre épargne dépasse six fois votre revenu mensuel net.",
                "cta": "Voir trois options sûres"},
-        "en": {"message": "Your savings account holds €{balance}, for {months} months well above a six-month buffer. "
-                          "About €{idle} could perhaps earn more. Three safe options, no obligation?",
-               "why": "Your savings stayed above six times your net monthly income for {months} months.",
+        "en": {"message": "Your savings account holds €{balance}, well above a six-month income buffer for {months} months now. About "
+                          "€{idle} could be earning more for you. Shall I show you three safe options, with no obligation?",
+               "why": "Your savings have stayed above six times your net monthly income for {months} months.",
                "cta": "See three safe options"},
     },
     "first_home_readiness": {
-        "nl": {"message": "Je huurt al {years_renting} jaar en hebt €{savings} gespaard. Een eerste woning is misschien "
-                          "dichterbij dan je denkt: {duty_local}, en 100% financiering voor starters. Samen bekijken wat haalbaar is?",
-               "why": "Huur sinds {years_renting} jaar, €{savings} spaargeld en je leeftijd wijzen op een mogelijk eerste-woningmoment.",
-               "cta": "Start de check"},
-        "fr": {"message": "Vous louez depuis {years_renting} ans et avez épargné €{savings}. Un premier logement est peut-être "
-                          "plus proche que vous ne le pensez : {duty_local}, et un financement à 100 % pour les primo-acquéreurs. On regarde ensemble ?",
-               "why": "Location depuis {years_renting} ans, €{savings} d'épargne et votre âge suggèrent un moment premier logement.",
-               "cta": "Lancer le check"},
-        "en": {"message": "You've rented for {years_renting} years and saved €{savings}. A first home may be closer than you "
-                          "think: {duty_local}, and 100% financing for first-time buyers. Shall we look at what is feasible?",
-               "why": "Renting for {years_renting} years, €{savings} saved and your age point to a possible first-home moment.",
-               "cta": "Start the check"},
+        "nl": {"message": "Je huurt al {years_renting} jaar en hebt €{savings} gespaard. Een eigen woning is misschien dichterbij dan "
+                          "je denkt, met {duty_local} en 100% financiering voor starters. Zullen we samen bekijken wat haalbaar is?",
+               "why": "Je huurt al {years_renting} jaar, hebt €{savings} gespaard en je leeftijd past bij een eerste woningaankoop.",
+               "cta": "Start de woningcheck"},
+        "fr": {"message": "Vous louez depuis {years_renting} ans et avez épargné {savings} €. Devenir propriétaire est peut-être plus "
+                          "proche que vous ne le pensez, avec {duty_local} et un financement à 100 % pour les primo-acquéreurs. On "
+                          "regarde ensemble ?",
+               "why": "Vous louez depuis {years_renting} ans, avez épargné {savings} € et votre âge correspond souvent à un premier"
+                      " achat.",
+               "cta": "Faire le point"},
+        "en": {"message": "You've been renting for {years_renting} years and have saved €{savings}. A home of your own may be closer "
+                          "than you think, with {duty_local} and 100% financing for first-time buyers. Shall we look at what's "
+                          "possible?",
+               "why": "You've rented for {years_renting} years, saved €{savings}, and your age often matches a first home purchase.",
+               "cta": "See what's possible"},
     },
     "child_turns_18": {
-        "nl": {"message": "{child_name} wordt 18 op {date}. Dat verandert het Groeipakket en opent de deur naar een studentenjob "
-                          "(tot 650 uur per jaar) en een eigen studentenrekening. Zullen we dat alvast klaarzetten?",
+        "nl": {"message": "{child_name} wordt 18 op {date}. Dan verandert het Groeipakket, en een studentenjob (tot 650 uur per jaar) "
+                          "en een eigen studentenrekening komen binnen bereik. Zullen we die rekening alvast voorbereiden?",
                "why": "De geboortedatum van {child_name} staat in je gezinsgegevens.",
                "cta": "Studentenrekening voorbereiden"},
-        "fr": {"message": "{child_name} aura 18 ans le {date}. Cela modifie les allocations familiales et ouvre la porte à un job "
-                          "étudiant (jusqu'à 650 heures par an) et à un compte étudiant. On prépare cela ensemble ?",
+        "fr": {"message": "{child_name} aura 18 ans le {date}. Les allocations familiales changent alors, et un job étudiant (jusqu'à "
+                          "650 heures par an) et un compte étudiant personnel deviennent possibles. Voulez-vous que nous préparions ce "
+                          "compte ?",
                "why": "La date de naissance de {child_name} figure dans vos données familiales.",
                "cta": "Préparer le compte étudiant"},
-        "en": {"message": "{child_name} turns 18 on {date}. That changes the child benefit rules and opens the door to a "
-                          "student job (up to 650 hours a year) and a student account. Shall we set that up?",
-               "why": "{child_name}'s birthdate is in your family data.",
-               "cta": "Prepare the student account"},
+        "en": {"message": "{child_name} turns 18 on {date}. That changes child benefit and opens the door to a student job (up to 650 "
+                          "hours a year) and a student account of their own. Shall we get that account ready?",
+               "why": "{child_name}'s date of birth is in your family details.",
+               "cta": "Set up a student account"},
     },
     "income_drop_care_mode": {
-        "nl": {"message": "We zien dat je loon van {employer} sinds {last_salary_date} niet meer binnenkomt. Geen zorgen, we "
-                          "helpen: een budgetplan, eventueel uitstel van betalingen, en een adviseur die je belt wanneer het jou past.",
-               "why": "Laatste loonstorting op {last_salary_date}, {days} dagen geleden; vaste kosten ongeveer €{fixed_costs} per maand.",
+        "nl": {"message": "We merken dat er sinds {last_salary_date} geen loon van {employer} meer is binnengekomen. We helpen je "
+                          "graag: met een budgetplan, eventueel uitstel van betalingen, en een adviseur die je belt wanneer het jou "
+                          "past.",
+               "why": "Laatste loonstorting op {last_salary_date}, {days} dagen geleden; je vaste kosten bedragen ongeveer "
+                      "€{fixed_costs} per maand.",
                "cta": "Praat met een adviseur"},
-        "fr": {"message": "Nous voyons que votre salaire de {employer} n'arrive plus depuis le {last_salary_date}. Pas d'inquiétude, "
-                          "nous vous aidons : un plan budgétaire, un éventuel report de paiements et un conseiller qui vous appelle quand cela vous convient.",
-               "why": "Dernier salaire le {last_salary_date}, il y a {days} jours ; charges fixes d'environ €{fixed_costs} par mois.",
+        "fr": {"message": "Nous constatons qu'aucun salaire de {employer} n'est arrivé depuis le {last_salary_date}. Nous sommes là "
+                          "pour vous aider : un plan budgétaire, éventuellement un report de paiements, et un conseiller qui vous "
+                          "appelle quand cela vous convient.",
+               "why": "Dernier salaire reçu le {last_salary_date}, il y a {days} jours ; vos charges fixes s'élèvent à environ "
+                      "{fixed_costs} € par mois.",
                "cta": "Parler à un conseiller"},
-        "en": {"message": "We notice your salary from {employer} has not arrived since {last_salary_date}. No worries, we can "
-                          "help: a budget plan, possibly a payment holiday, and an advisor who calls when it suits you.",
-               "why": "Last salary on {last_salary_date}, {days} days ago; fixed costs of about €{fixed_costs} a month.",
-               "cta": "Talk to an advisor"},
+        "en": {"message": "We've noticed that no salary from {employer} has come in since {last_salary_date}. We're here to help: a "
+                          "budget plan, possibly a payment holiday, and an adviser who calls you whenever suits you.",
+               "why": "Last salary received on {last_salary_date}, {days} days ago; your fixed costs are about €{fixed_costs} a "
+                      "month.",
+               "cta": "Talk to an adviser"},
     },
 }
 GENERIC = {
-    "nl": {"why": "Dit volgt uit: {evidence_0}", "cta": "Vertel me meer"},
-    "fr": {"why": "Cela découle de : {evidence_0}", "cta": "En savoir plus"},
-    "en": {"why": "This follows from: {evidence_0}", "cta": "Tell me more"},
+    "nl": {"why": "Gebaseerd op: {evidence_0}", "cta": "Vertel me meer"},
+    "fr": {"why": "Sur la base de : {evidence_0}", "cta": "En savoir plus"},
+    "en": {"why": "Based on: {evidence_0}", "cta": "Tell me more"},
 }
 
 
