@@ -18,7 +18,7 @@ def types(moments):
 
 def test_holiday_pay_fires_within_45_days_of_may_payday():
     today = date(2026, 4, 20)
-    c = make_customer(transactions=salaries(last=date(2026, 4, 25)) + [
+    c = make_customer(transactions=salaries(last=date(2026, 3, 25)) + [
         {"date": "2025-05-22", "amount": 2300.0, "payee": "Testco", "category": "holiday_pay"}])
     moments = holiday_pay.detect(c, today)
     assert len(moments) == 1
@@ -29,7 +29,7 @@ def test_holiday_pay_fires_within_45_days_of_may_payday():
 
 
 def test_holiday_pay_predicted_from_gross_when_no_history():
-    c = make_customer(transactions=salaries(last=date(2026, 4, 25)))
+    c = make_customer(transactions=salaries(last=date(2026, 3, 25)))
     m = holiday_pay.detect(c, date(2026, 4, 20))[0]
     assert m.facts["amount"] == round(0.92 * 3000) and m.confidence == 0.7
 
@@ -45,7 +45,7 @@ def test_holiday_pay_silent_outside_window_and_for_pensioners():
 
 def test_year_end_bonus_pension_topup_fires_in_november_with_room():
     today = date(2026, 11, 15)
-    c = make_customer(transactions=salaries(last=date(2026, 11, 25)) + [
+    c = make_customer(transactions=salaries(last=date(2026, 10, 25)) + [
         {"date": "2025-12-20", "amount": 1900.0, "payee": "Testco", "category": "bonus"}],
         products={"pension_saving": {"contributions_ytd": 600.0, "ceiling": 1050, "monthly": 0.0}})
     moments = year_end_bonus_pension_topup.detect(c, today)
@@ -55,10 +55,10 @@ def test_year_end_bonus_pension_topup_fires_in_november_with_room():
 
 
 def test_year_end_bonus_silent_when_ceiling_reached_or_wrong_month():
-    full = make_customer(transactions=salaries(last=date(2026, 11, 25)),
+    full = make_customer(transactions=salaries(last=date(2026, 10, 25)),
                          products={"pension_saving": {"contributions_ytd": 1050.0, "ceiling": 1050, "monthly": 0.0}})
     assert year_end_bonus_pension_topup.detect(full, date(2026, 11, 15)) == []
-    june = make_customer(transactions=salaries(last=date(2026, 6, 25)),
+    june = make_customer(transactions=salaries(last=date(2026, 5, 25)),
                          products={"pension_saving": {"contributions_ytd": 0.0, "ceiling": 1050, "monthly": 0.0}})
     assert year_end_bonus_pension_topup.detect(june, date(2026, 6, 15)) == []
 
@@ -153,12 +153,13 @@ def test_child_turns_18_silent_for_younger_or_older_children():
 def test_income_drop_care_mode_fires_when_salary_stopped_two_months():
     c = make_customer(transactions=salaries(last=date(2026, 7, 5)) + [
         {"date": "2026-08-08", "amount": 1200.0, "payee": "RVA", "category": "benefit"},
-        {"date": "2026-09-01", "amount": -900.0, "payee": "Landlord", "category": "rent"}])
+        {"date": "2026-09-01", "amount": -900.0, "payee": "Landlord", "category": "rent"},
+        {"date": "2026-09-28", "amount": -85.0, "payee": "Colruyt", "category": "groceries"}])
     moments = income_drop_care_mode.detect(c, TODAY)
     assert len(moments) == 1
     m = moments[0]
     assert m.stakes == "high" and m.human_review is True and m.source == "protection" and m.category == "care"
-    assert m.facts["days"] == 87 and m.facts["benefit"] is True and m.channel_hint == "advisor"
+    assert m.facts["days"] == 85 and m.facts["benefit"] is True and m.channel_hint == "advisor"  # 5 Jul -> 28 Sep
 
 
 def test_income_drop_silent_when_salary_keeps_coming():

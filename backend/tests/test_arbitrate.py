@@ -95,12 +95,12 @@ def test_marketing_consent_off_drops_sales_moments(fresh_store):
 
 
 def test_channel_choice():
-    medium = make_moment("x", stakes="medium")
+    medium = make_moment("medium_moment", stakes="medium")
     assert choose_channel(medium, make_customer(digital_comfort=1)) == "advisor"
     assert choose_channel(medium, make_customer(age=71, digital_comfort=3)) == "voice"
     assert choose_channel(medium, make_customer(age=29, digital_comfort=5)) == "in_app_card"
-    assert choose_channel(make_moment("y", stakes="high"), make_customer(age=29, digital_comfort=5)) == "advisor"
-    assert choose_channel(make_moment("z", human_review=True), make_customer(age=29, digital_comfort=5)) == "advisor"
+    assert choose_channel(make_moment("high_moment", stakes="high"), make_customer(age=29, digital_comfort=5)) == "advisor"
+    assert choose_channel(make_moment("reviewed_moment", human_review=True), make_customer(age=29, digital_comfort=5)) == "advisor"
 
 
 def test_decision_log_is_written(fresh_store, tmp_path):

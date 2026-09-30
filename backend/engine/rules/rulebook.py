@@ -13,7 +13,7 @@ import threading
 from datetime import date, timedelta
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from engine.models import Customer, Moment, Stakes
 from engine.render import render
@@ -31,6 +31,8 @@ Scalar = str | int | float | bool | None
 
 
 class Condition(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     field: str = Field(pattern=r"^[a-z_][a-z0-9_]{1,40}$")
     op: ConditionOp
     value: Scalar | list[Scalar] = None
@@ -67,6 +69,8 @@ class Condition(BaseModel):
 
 
 class Impact(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     kind: Literal["none", "pct_above_exemption", "pct_of_field", "yearly_schedule"] = "none"
     field: str | None = Field(default=None, pattern=r"^[a-z_][a-z0-9_]{1,40}$")
     pct: float | None = Field(default=None, ge=0, le=100)
@@ -115,6 +119,8 @@ def _schedule_value(schedule: dict[str, float], year: int) -> float:
 
 
 class WorldRule(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     id: str = Field(pattern=r"^[a-z][a-z0-9_]{2,50}$")
     title: dict[Lang, str]
     summary: dict[Lang, str]  # narration template per language, placeholders from facts

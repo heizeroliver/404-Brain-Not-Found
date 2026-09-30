@@ -22,7 +22,7 @@ def detect(customer: Customer, today: date) -> list[Moment]:
     emp = customer.employment
     if emp.contract_type not in ("permanent", "temporary") or not emp.employer:
         return []
-    salaries = salary_transactions(customer)
+    salaries = salary_transactions(customer, today)
     if not salaries:
         return []
     last = max(t.date for t in salaries)

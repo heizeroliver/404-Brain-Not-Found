@@ -23,8 +23,8 @@ def detect(customer: Customer, today: date) -> list[Moment]:
     emp = customer.employment
     if emp.gross_monthly_salary <= 0:
         return []
-    last_salary = max(t.date for t in salary_transactions(customer))
-    history = [t for t in customer.transactions if t.category == "holiday_pay"]
+    last_salary = max(t.date for t in salary_transactions(customer, today))
+    history = [t for t in customer.transactions if t.category == "holiday_pay" and t.date <= today]
     if history:
         ref = max(history, key=lambda t: t.date)
         pay_day, amount, confidence = ref.date.day, ref.amount, 0.9

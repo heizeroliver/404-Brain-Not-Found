@@ -10,8 +10,10 @@ def eur(amount: float) -> str:
     return f"€{amount:,.0f}"
 
 
-def salary_transactions(customer: Customer) -> list[Transaction]:
-    return [t for t in customer.transactions if t.category == "salary"]
+def salary_transactions(customer: Customer, today: date | None = None) -> list[Transaction]:
+    """Salary credits, ignoring anything dated after `today`."""
+    return [t for t in customer.transactions
+            if t.category == "salary" and (today is None or t.date <= today)]
 
 
 def as_of(customer: Customer, today: date) -> date:
@@ -20,9 +22,10 @@ def as_of(customer: Customer, today: date) -> date:
     Lets calendar rules be projected into the future (timeline) without reading
     the end of the dataset as "income stopped".
     """
-    if not customer.transactions:
+    known = [t.date for t in customer.transactions if t.date <= today]
+    if not known:
         return today
-    return min(today, max(t.date for t in customer.transactions))
+    return max(known)
 
 
 def salary_alive(customer: Customer, today: date, max_gap_days: int = 45) -> bool:
@@ -30,7 +33,7 @@ def salary_alive(customer: Customer, today: date, max_gap_days: int = 45) -> boo
     emp = customer.employment
     if emp.contract_type not in ("permanent", "temporary") or not emp.employer:
         return False
-    salaries = salary_transactions(customer)
+    salaries = salary_transactions(customer, today)
     if not salaries:
         return False
     last = max(t.date for t in salaries)

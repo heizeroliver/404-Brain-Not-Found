@@ -26,7 +26,7 @@ def detect(customer: Customer, today: date) -> list[Moment]:
     if room <= 0:
         return []
     emp = customer.employment
-    bonuses = [t for t in customer.transactions if t.category == "bonus"]
+    bonuses = [t for t in customer.transactions if t.category == "bonus" and t.date <= today]
     if bonuses:
         ref = max(bonuses, key=lambda t: t.date)
         bonus, confidence = ref.amount, 0.85

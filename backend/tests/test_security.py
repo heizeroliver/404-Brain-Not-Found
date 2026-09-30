@@ -100,7 +100,7 @@ def test_admin_rules_are_validated_not_executed(client, headers_for):
     assert r.status_code == 201 and r.json()["affected_customers"] > 0
     feed = client.get("/me/moments", headers=headers_for("lien")).json()["moments"]
     msg = next(m["message"] for m in feed if m["type"] == "evil_rule")
-    assert "class" not in msg.replace("{__class__}", "") and "€" not in msg or "type" not in msg
+    assert "<class" not in msg and "float" not in msg  # placeholders never reach Python attributes
     assert client.post("/admin/rules", json=evil, headers=admin).status_code == 409  # duplicate id
 
 
@@ -123,6 +123,8 @@ def test_feedback_accepts_only_the_enum(client, headers_for):
     lien = headers_for("lien")
     assert client.post("/me/feedback", json={"moment_type": "idle_cash", "action": "delete_all"}, headers=lien).status_code == 422
     assert client.post("/me/feedback", json={"moment_type": "idle cash; drop", "action": "helpful"}, headers=lien).status_code == 422
+    assert client.post("/me/feedback", json={"moment_type": "idle_cash", "action": "helpful", "customer_id": "marc"},
+                       headers=lien).status_code == 422  # unknown fields are rejected, not silently ignored
     assert client.post("/me/feedback", json={"moment_type": "idle_cash", "action": "helpful"}, headers=lien).status_code == 201
     r = client.post("/me/feedback", json={"moment_type": "idle_cash", "action": "not_relevant"}, headers=lien)
     assert r.status_code == 201

@@ -24,7 +24,7 @@ from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response, st
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
@@ -86,6 +86,8 @@ async def unhandled_error(request: Request, exc: Exception) -> JSONResponse:
 # ----------------------------------------------------------------- schemas --
 
 class LoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     customer_id: str = Field(pattern=r"^[a-z0-9_]{2,40}$")
     password: str = Field(min_length=1, max_length=128)
 
@@ -99,6 +101,8 @@ class LoginResponse(BaseModel):
 
 
 class FeedbackRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     moment_type: str = Field(pattern=r"^[a-z0-9_]{3,60}$")
     action: Literal["not_now", "not_relevant", "never", "helpful"]
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Literal
 
-from pydantic import BaseModel, Field, computed_field
+from pydantic import BaseModel, ConfigDict, Field, computed_field
 
 Stakes = Literal["low", "medium", "high"]
 Channel = Literal["in_app_card", "push", "voice", "advisor", "letter"]
@@ -134,6 +134,8 @@ class Products(BaseModel):
 
 class Consents(BaseModel):
     """Toggles the customer controls. They change which rules run."""
+    model_config = ConfigDict(strict=True, extra="forbid")  # real booleans only, no "yes"/"1"
+
     use_insurance_data: bool = True
     use_other_banks: bool = False
     marketing: bool = True
