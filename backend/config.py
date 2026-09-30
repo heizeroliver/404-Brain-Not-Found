@@ -95,4 +95,6 @@ ELEVENLABS_API_KEY = _env("ELEVENLABS_API_KEY")
 ELEVENLABS_VOICE_NL = _env("ELEVENLABS_VOICE_NL")
 ELEVENLABS_VOICE_FR = _env("ELEVENLABS_VOICE_FR")
 ELEVENLABS_VOICE_EN = _env("ELEVENLABS_VOICE_EN")
+# Optional: ElevenLabs conversational agent id ("Talk to Kate"); public agent id, not a secret
+ELEVENLABS_AGENT_ID = _env("ELEVENLABS_AGENT_ID")
 ELEVENLABS_MODEL = _env("ELEVENLABS_MODEL", "eleven_multilingual_v2")
