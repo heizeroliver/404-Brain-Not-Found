@@ -179,7 +179,7 @@ backend/
   goals_api.py            /me/goals routes (token-scoped)
   scripts/benchmark.py    throughput benchmark
   data/generate.py        seeded synthetic dataset (203 customers)
-  tests/                  pytest suite (0 tests): security, rules, arbitration, language, goals, talk, calendar, persistence
+  tests/                  pytest suite (175 tests): security, rules, arbitration, language, goals, talk, calendar, persistence
   requirements.lock       pinned dependencies
 ```
 
