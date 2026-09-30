@@ -3,6 +3,7 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from engine import allocation
 from engine.models import Customer, Moment
 from engine.rules.common import eur
 
@@ -11,7 +12,7 @@ CATEGORY = "sales"
 REQUIRES_INSURANCE_DATA = False
 PROJECTABLE = False  # state-based: only evaluated for today
 MIN_BALANCE = 15000.0
-MONTHS = 6
+MONTHS = allocation.BUFFER_MONTHS
 MIN_IDLE = 2000.0  # below this, after the customer's reserved goals, there is nothing to say
 
 
@@ -28,9 +29,11 @@ def detect(customer: Customer, today: date) -> list[Moment]:
     if floor <= threshold or balance <= threshold:
         return []
     # The customer's own goals come first: money she said to keep available is not idle.
+    # Same numbers as GET /me/overview's allocation (engine/allocation.py).
+    alloc = allocation.compute(customer)
     reserved_goals = [g for g in customer.goals if g.keep_accessible]
-    reserved = sum(g.amount for g in reserved_goals)
-    idle = balance - MONTHS * net - reserved
+    reserved = alloc["reserved_total"]
+    idle = alloc["remaining"]
     if reserved and idle < MIN_IDLE:
         return []
     evidence = [
