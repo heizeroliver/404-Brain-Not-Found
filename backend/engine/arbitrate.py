@@ -17,6 +17,19 @@ from store import Store
 
 STAKES_WEIGHT = {"low": 1.0, "medium": 2.0, "high": 3.0}
 CAP_DAYS = 7
+# actions that put a product in front of the customer: the moment is commercial whatever its label
+COMMERCIAL_ACTION_PREFIXES = ("buy_", "subscribe_", "offer_", "apply_for_", "open_new_", "upsell_")
+COMMERCIAL_LEGAL_BASES = frozenset({"consent_marketing", "marketing", "direct_marketing"})
+
+
+def is_commercial(moment: Moment) -> bool:
+    """Marketing consent is enforced on the moment's nature, not only its self-declared category."""
+    if moment.category == "care":
+        return False
+    return (moment.category == "sales"
+            or moment.legal_basis in COMMERCIAL_LEGAL_BASES
+            or any(a.startswith(COMMERCIAL_ACTION_PREFIXES) for a in moment.actions)
+            or moment.facts.get("product_offer") is True)
 
 
 class RankedMoment(BaseModel):
@@ -65,10 +78,11 @@ def arbitrate(customer: Customer, moments: list[Moment], today: date, store: Sto
     care_mode = any(m.category == "care" for m in moments)
     scored: list[tuple[float, Moment]] = []
     for m in moments:
-        if m.category == "sales" and not customer.consents.marketing:
+        commercial = is_commercial(m)
+        if commercial and not customer.consents.marketing:
             log(m, "dropped", "marketing consent off")
             continue
-        if care_mode and m.category == "sales":
+        if care_mode and commercial:
             log(m, "dropped", "vulnerability guard: care mode active, no sales")
             continue
         # protection and care moments cannot be switched off through feedback

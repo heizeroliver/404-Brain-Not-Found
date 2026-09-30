@@ -1,5 +1,5 @@
 // Kate Foresight shell: header, login, hash router, Kate voice widget.
-import { state, t, api, el, clear, icon, navigate, onLanguageChange, setLang, toast, errorState } from "./core.js";
+import { state, t, api, abortAllRequests, el, clear, icon, navigate, onLanguageChange, setLang, toast, errorState } from "./core.js";
 
 const $ = (id) => document.getElementById(id);
 const CUSTOMER_SECTIONS = ["overview", "talk", "timeline", "plans", "data"];
@@ -166,8 +166,12 @@ function renderLogin(root) {
 
 function logout(reason) {
   state.token = null; state.role = null; state.profile = null;
+  abortAllRequests();  // in-flight responses of the old session are dropped
   saveSession();
   removeAssistant();
+  // clear session-derived DOM and let views drop their in-memory caches
+  const root = $("app"); if (root) root.replaceChildren();
+  try { window.dispatchEvent(new CustomEvent("kate:session-cleared")); } catch (_) {}
   if (reason === "expired") toast(t("session_expired"), "warn");
   navigate("#/login");
 }

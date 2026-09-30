@@ -10,10 +10,14 @@
 """
 from __future__ import annotations
 
+import contextlib
 import hashlib
 import hmac
 import secrets
+import threading
 import time
+from collections import OrderedDict, deque
+from collections.abc import Iterator
 from typing import Literal
 
 import jwt
@@ -39,9 +43,64 @@ _DEMO_HASH = _hash(config.demo_password())
 _ADMIN_HASH = _hash(config.admin_password())
 
 
+# Cache of recent PBKDF2 results, keyed by a keyed (HMAC) digest of the attempt, never the
+# plaintext: a flood repeating the same guesses costs one cheap HMAC instead of 100k iterations.
+_CACHE_KEY = secrets.token_bytes(32)
+_CACHE_MAX = 1024
+_verify_cache: "OrderedDict[bytes, bool]" = OrderedDict()
+_cache_lock = threading.Lock()
+
+
 def verify_password(password: str, admin: bool = False) -> bool:
     """Constant-time comparison against the hashed demo (or admin) password."""
-    return hmac.compare_digest(_hash(password), _ADMIN_HASH if admin else _DEMO_HASH)
+    key = hmac.new(_CACHE_KEY, (("a:" if admin else "c:") + password).encode("utf-8"), hashlib.sha256).digest()
+    with _cache_lock:
+        cached = _verify_cache.get(key)
+        if cached is not None:
+            _verify_cache.move_to_end(key)
+            return cached
+    ok = hmac.compare_digest(_hash(password), _ADMIN_HASH if admin else _DEMO_HASH)
+    with _cache_lock:
+        _verify_cache[key] = ok
+        while len(_verify_cache) > _CACHE_MAX:
+            _verify_cache.popitem(last=False)
+    return ok
+
+
+# Global (all clients together) guard on the expensive login path, on top of slowapi's per-IP
+# limit: distributed attackers cannot pin every worker on PBKDF2.
+LOGIN_MAX_CONCURRENT = 4
+LOGIN_GLOBAL_PER_MINUTE = 300
+_login_slots = threading.BoundedSemaphore(LOGIN_MAX_CONCURRENT)
+_login_times: deque[float] = deque()
+_login_lock = threading.Lock()
+
+
+class LoginBusy(Exception):
+    """The global login budget is exhausted; the caller answers 503/429."""
+
+
+def _take_global_budget(now: float | None = None) -> bool:
+    now = time.monotonic() if now is None else now
+    with _login_lock:
+        while _login_times and now - _login_times[0] > 60.0:
+            _login_times.popleft()
+        if len(_login_times) >= LOGIN_GLOBAL_PER_MINUTE:
+            return False
+        _login_times.append(now)
+        return True
+
+
+@contextlib.contextmanager
+def login_guard(timeout: float = 2.0) -> Iterator[None]:
+    if not _take_global_budget():
+        raise LoginBusy("global login rate exceeded")
+    if not _login_slots.acquire(timeout=timeout):
+        raise LoginBusy("too many concurrent logins")
+    try:
+        yield
+    finally:
+        _login_slots.release()
 
 
 class Principal(BaseModel):

@@ -32,8 +32,13 @@ def detect(customer: Customer, today: date) -> list[Moment]:
         return []
     benefits = [t for t in customer.transactions if t.category == "benefit" and t.date > last]
     since = horizon - timedelta(days=90)
+    # insurance-data opt-out: insurance premiums are not read (nor mentioned) without consent
+    insurance_ok = customer.consents.use_insurance_data
+    cost_categories = FIXED_COSTS if insurance_ok else FIXED_COSTS - {"insurance"}
     fixed = sum(-t.amount for t in customer.transactions
-                if t.category in FIXED_COSTS and t.amount < 0 and t.date >= since) / 3.0
+                if t.category in cost_categories and t.amount < 0 and t.date >= since) / 3.0
+    cost_label = ("housing, energy, telecom, childcare, insurance" if insurance_ok
+                  else "housing, energy, telecom, childcare")
     if benefits:
         replacement = f"unemployment benefit received since {min(t.date for t in benefits).isoformat()}"
     else:
@@ -46,7 +51,7 @@ def detect(customer: Customer, today: date) -> list[Moment]:
         evidence=[
             f"last salary from {emp.employer} on {last.isoformat()} ({days} days ago)",
             replacement,
-            f"fixed costs of about {eur(fixed)}/month (housing, energy, telecom, childcare, insurance)",
+            f"fixed costs of about {eur(fixed)}/month ({cost_label})",
             "unemployment benefits are capped at 24 months since 1 Mar 2026",
         ],
         actions=["budget_coach", "payment_plan", "talk_to_advisor"],
