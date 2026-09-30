@@ -1,23 +1,24 @@
 # secrets and local config
 .env
-.env.*
-!.env.example
+backend/.env
+*.env.local
 
 # python
-.venv/
-venv/
 __pycache__/
 *.pyc
+.venv/
+venv/
 .pytest_cache/
+*.egg-info/
 
-# generated at runtime
+# demo runtime artefacts
 backend/data/decision_log.jsonl
 *.mp3
 
-# node
+# node (frontend has no build, but just in case)
 node_modules/
 
-# os / editors
+# OS / editors
 .DS_Store
 .idea/
 .vscode/
