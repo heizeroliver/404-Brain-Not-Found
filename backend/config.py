@@ -28,8 +28,10 @@ APP_ENV = _env("APP_ENV", "dev")
 def jwt_secret() -> str:
     secret = _env("JWT_SECRET")
     if secret:
-        if len(secret) < 32 and APP_ENV == "production":
-            raise RuntimeError("JWT_SECRET must be at least 32 characters in production")
+        if len(secret) < 32:
+            if APP_ENV == "production":
+                raise RuntimeError("JWT_SECRET must be at least 32 characters in production")
+            log.warning("JWT_SECRET is shorter than 32 characters; use a random 48-byte value.")
         return secret
     if APP_ENV == "production":
         raise RuntimeError("JWT_SECRET is not set; refusing to start in production")
@@ -49,6 +51,18 @@ def demo_password() -> str:
     return pwd
 
 
+def admin_password() -> str:
+    """Separate admin password, so a customer who knows the shared demo password is
+    not an admin. Dev falls back to DEMO_PASSWORD (demo convenience); production refuses."""
+    pwd = _env("ADMIN_PASSWORD")
+    if pwd:
+        return pwd
+    if APP_ENV == "production":
+        raise RuntimeError("ADMIN_PASSWORD is not set; refusing to start in production")
+    log.warning("ADMIN_PASSWORD not set: the admin user accepts DEMO_PASSWORD (dev only).")
+    return demo_password()
+
+
 def today() -> date:
     """Demo clock. DEMO_TODAY=YYYY-MM-DD freezes the engine for reproducible demos."""
     raw = _env("DEMO_TODAY")
@@ -58,10 +72,14 @@ def today() -> date:
 
 
 FRONTEND_ORIGIN = _env("FRONTEND_ORIGIN", "http://localhost:5173")
+# Set in the container image; when set, the API also serves the frontend under /app (same origin).
+FRONTEND_DIR = _env("FRONTEND_DIR")
 CUSTOMERS_PATH = Path(_env("CUSTOMERS_PATH", str(BASE_DIR / "data" / "customers.json")))
 DECISION_LOG_PATH = Path(_env("DECISION_LOG_PATH", str(BASE_DIR / "data" / "decision_log.jsonl")))
 LOGIN_RATE_LIMIT = _env("LOGIN_RATE_LIMIT", "5/minute")
 VOICE_RATE_LIMIT = _env("VOICE_RATE_LIMIT", "10/minute")
+GLOBAL_RATE_LIMIT = _env("GLOBAL_RATE_LIMIT", "120/minute")  # per client IP, every route
+MAX_BODY_BYTES = 64 * 1024  # request bodies above this are refused with 413
 JWT_TTL_HOURS = 8
 
 # Narration backends, in order of preference:

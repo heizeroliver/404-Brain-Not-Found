@@ -16,6 +16,7 @@ Routes
 from __future__ import annotations
 
 import logging
+import os
 from collections import Counter
 from datetime import date, datetime, timezone
 from typing import Any, Literal
@@ -27,6 +28,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from slowapi.util import get_remote_address
 
 import auth
@@ -34,7 +36,7 @@ import config
 from engine.arbitrate import ArbitrationResult, arbitrate
 from engine.models import Channel, Consents, Customer, Moment
 from engine.narrate import gemini_backend, narrate
-from engine.rules import run_rules
+from engine.rules import LIFE_CALENDAR_RULES, run_rules
 from engine.rules.rulebook import RULEBOOK, WorldRule
 from engine.twin import build_twin
 from engine.voice import synthesize
@@ -46,9 +48,10 @@ log = logging.getLogger("foresight.api")
 app = FastAPI(title="Kate Foresight API", version="0.1.0", docs_url=None, redoc_url=None, openapi_url=None)
 store = Store(config.CUSTOMERS_PATH, config.DECISION_LOG_PATH)
 
-limiter = Limiter(key_func=get_remote_address)
+limiter = Limiter(key_func=get_remote_address, default_limits=[config.GLOBAL_RATE_LIMIT])
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[config.FRONTEND_ORIGIN],
@@ -60,11 +63,25 @@ app.add_middleware(
 
 @app.middleware("http")
 async def security_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
+    if request.method in ("POST", "PUT"):
+        length = request.headers.get("content-length")
+        if length is None or not length.isdigit():
+            return JSONResponse(status_code=411, content={"detail": "Content-Length required"})
+        if int(length) > config.MAX_BODY_BYTES:
+            return JSONResponse(status_code=413, content={"detail": "Request body too large"})
     response = await call_next(request)
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "no-referrer"
-    response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
+    if request.url.path.startswith("/app"):
+        # the single-file frontend (one-container deploy): own origin only, inline script/style in that file
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data:; media-src 'self' blob:; connect-src 'self'; base-uri 'none'; "
+            "form-action 'self'; frame-ancestors 'none'")
+    else:
+        response.headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'"
     response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
     response.headers["Cache-Control"] = "no-store"
     return response
@@ -156,6 +173,9 @@ class TimelineResponse(BaseModel):
 
 # ----------------------------------------------------------------- helpers --
 
+MAX_FEEDBACK_PER_CUSTOMER = 500  # in-memory store: bound what one token can append
+
+
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
@@ -215,7 +235,8 @@ def health() -> dict[str, Any]:
 @app.post("/login", response_model=LoginResponse)
 @limiter.limit(config.LOGIN_RATE_LIMIT)
 def login(request: Request, body: LoginRequest) -> LoginResponse:
-    password_ok = auth.verify_password(body.password)  # always evaluated: no user enumeration by timing
+    # always evaluated (one hash either way): no user enumeration by timing
+    password_ok = auth.verify_password(body.password, admin=body.customer_id == "admin")
     if body.customer_id == "admin":
         role: auth.Role = "admin"
         exists = True
@@ -270,6 +291,11 @@ def my_timeline(customer_id: str = Depends(auth.current_customer_id),
 @app.post("/me/feedback", status_code=status.HTTP_201_CREATED)
 def my_feedback(body: FeedbackRequest, customer_id: str = Depends(auth.current_customer_id)) -> dict[str, Any]:
     _customer(customer_id)
+    known = {m.TYPE for m in LIFE_CALENDAR_RULES} | {r.id for r in RULEBOOK.rules()}
+    if body.moment_type not in known:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Unknown moment type")
+    if store.feedback_count(customer_id) >= MAX_FEEDBACK_PER_CUSTOMER:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too much feedback")
     entry = store.add_feedback(customer_id, body.moment_type, body.action)
     store.log_decisions([{"ts": entry["ts"], "customer_id": customer_id, "moment_type": body.moment_type,
                           "source": None, "stakes": None, "decision": "feedback", "reason": body.action,
@@ -400,3 +426,16 @@ def admin_add_rule(rule: WorldRule, principal: auth.Principal = Depends(auth.req
     return {"rule": rule.model_dump(mode="json"), "affected_customers": len(affected),
             "sample_customer_ids": affected[:5], "total_impact": round(total_impact, 2),
             "customers_total": len(store.customers)}
+
+
+# ------------------------------------------------------------- static app --
+# One-container deploy (Cloud Run): the frontend is served from the same origin under /app.
+if config.FRONTEND_DIR and os.path.isdir(config.FRONTEND_DIR):
+    from fastapi.responses import RedirectResponse
+    from fastapi.staticfiles import StaticFiles
+
+    app.mount("/app", StaticFiles(directory=config.FRONTEND_DIR, html=True), name="app")
+
+    @app.get("/", include_in_schema=False)
+    def root() -> RedirectResponse:
+        return RedirectResponse("/app/")

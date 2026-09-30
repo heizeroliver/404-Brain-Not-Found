@@ -1,0 +1,11 @@
+.git
+.venv
+**/__pycache__
+**/.pytest_cache
+backend/.env
+**/*.env.local
+backend/data/decision_log.jsonl
+screenshots
+docs
+*.md
+!backend/README.md
