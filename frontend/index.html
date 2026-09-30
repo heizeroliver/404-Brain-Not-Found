@@ -408,10 +408,83 @@
   async function loadFeed() {
     loading();
     try {
-      const data = await (await api("/me/moments?lang=" + state.lang)).json();
+      const [data, goals] = await Promise.all([
+        api("/me/moments?lang=" + state.lang).then((r) => r.json()),
+        api("/me/goals").then((r) => r.json()).catch(() => ({ goals: [] })),
+      ]);
       state.feed = data;
+      state.goals = goals.goals || [];
       renderFeed(data);
     } catch (err) { errorBox(err); }
+  }
+
+  // ----------------------------------------------- goals: customer-stated intent
+  function goalEur(n) { return "€" + Math.round(Number(n)).toLocaleString(t("locale")); }
+  function goalSentence(g) { return t("goal_sentence", t("gp_" + g.purpose), goalEur(g.amount), g.keep_accessible); }
+  function goalsCard() {
+    const card = el("section", "card p-4 fade");
+    const title = el("h2", "font-semibold text-sm", t("goal_title"));
+    title.id = "goal-title";
+    card.setAttribute("aria-labelledby", "goal-title");
+    card.appendChild(title);
+    const form = el("form", "mt-2 flex gap-2");
+    const input = el("input", "field flex-1 min-w-0");
+    input.type = "text"; input.maxLength = 300; input.placeholder = t("goal_ph");
+    input.setAttribute("aria-label", t("goal_title"));
+    const send = el("button", "btn btn-primary", t("goal_send"));
+    send.type = "submit";
+    form.appendChild(input); form.appendChild(send);
+    card.appendChild(form);
+    const proposal = el("div", "mt-3 text-sm");
+    proposal.setAttribute("aria-live", "polite");
+    card.appendChild(proposal);
+    form.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      clear(proposal);
+      send.disabled = true;
+      try {
+        const p = (await (await api("/me/goals/parse", { method: "POST", body: JSON.stringify({ text, lang: state.lang }) })).json()).proposal;
+        if (!p) { proposal.appendChild(el("p", "text-slate-600", t("goal_none"))); return; }
+        proposal.appendChild(el("p", "font-medium", goalSentence(p)));
+        const row = el("div", "mt-2 flex gap-2");
+        const ok = el("button", "btn btn-primary", t("goal_confirm"));
+        const no = el("button", "btn btn-secondary", t("goal_cancel"));
+        ok.type = "button"; no.type = "button";
+        ok.addEventListener("click", async () => {
+          ok.disabled = true;
+          try {
+            await api("/me/goals", { method: "POST", body: JSON.stringify({ purpose: p.purpose, amount: p.amount, keep_accessible: p.keep_accessible }) });
+            loadFeed();
+          } catch (err) { ok.disabled = false; alert(t("save_fail") + err.message); }
+        });
+        no.addEventListener("click", () => clear(proposal));
+        row.appendChild(ok); row.appendChild(no);
+        proposal.appendChild(row);
+      } catch (err) { proposal.appendChild(el("p", "text-red-600", t("load_error") + err.message)); }
+      finally { send.disabled = false; }
+    });
+    if (state.goals && state.goals.length) {
+      const list = el("div", "mt-3 flex flex-wrap items-center gap-2");
+      state.goals.forEach((g) => {
+        const label = `${cap(t("gp_" + g.purpose))} · ${goalEur(g.amount)}`;
+        const c = el("span", "chip chip-cal", label);
+        const x = el("button", "btn btn-quiet", "×");
+        x.type = "button";
+        x.setAttribute("aria-label", t("goal_remove", label));
+        x.addEventListener("click", async () => {
+          x.disabled = true;
+          try { await api("/me/goals/" + encodeURIComponent(g.id), { method: "DELETE" }); loadFeed(); }
+          catch (err) { x.disabled = false; alert(t("save_fail") + err.message); }
+        });
+        c.appendChild(x);
+        list.appendChild(c);
+      });
+      card.appendChild(list);
+      card.appendChild(el("p", "mt-2 text-xs text-slate-600", t("goal_hint")));
+    }
+    return card;
   }
 
   function renderFeed(data) {
@@ -428,6 +501,7 @@
     head.appendChild(el("span", "", `${t("moments", data.moments.length)} · ${data.today}`));
     head.appendChild(el("span", "", `${t("narration")}: ${data.narration}`));
     body.appendChild(head);
+    body.appendChild(goalsCard());
     if (!data.moments.length) body.appendChild(el("p", "text-sm text-slate-600 py-8 text-center", t("empty")));
     data.moments.forEach((m) => body.appendChild(momentCard(m)));
   }
@@ -643,7 +717,8 @@
       fillTable($("admin-by-channel"), Object.entries(d.moments_by_channel).map(([k, v]) => [CHANNEL_LABEL[k] || k, v]));
       fillTable($("admin-by-source"), Object.entries(d.moments_by_source).map(([k, v]) => [SOURCE_LABEL[k] || k, v]));
       fillTable($("admin-optouts"), [["'Never' feedback", d.opt_outs.never_feedback], ["Marketing off", d.opt_outs.marketing_off],
-        ["Insurance data off", d.opt_outs.insurance_data_off], ["Other banks on", d.opt_outs.other_banks_on]]);
+        ["Insurance data off", d.opt_outs.insurance_data_off], ["Other banks on", d.opt_outs.other_banks_on],
+        ["Customer goals set", d.goals_total ?? 0]]);
       const world = $("admin-world"); clear(world);
       const th = el("tr", "text-left text-slate-600"); ["Rule", "Since", "Affected", "€ impact"].forEach((h) => th.appendChild(el("th", "", h))); world.appendChild(th);
       d.world_rules.forEach((r) => {
