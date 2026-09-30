@@ -4,7 +4,11 @@
 #   bash scripts/deploy_cloud_run.sh
 # Secrets are generated here and set on the service; they are printed once and never written to the repo.
 set -euo pipefail
-PROJECT="$(gcloud config get-value project 2>/dev/null)"
+PROJECT="${PROJECT:-$(gcloud config get-value project 2>/dev/null)}"
+if [ -z "$PROJECT" ]; then
+  echo "No Google Cloud project set. Run: gcloud config set project <PROJECT_ID>  (then run this script again)"; exit 1
+fi
+gcloud config set project "$PROJECT" >/dev/null
 REGION="${REGION:-europe-west1}"   # St-Ghislain, Belgium
 SERVICE="${SERVICE:-kate-foresight}"
 echo "Project: $PROJECT  Region: $REGION  Service: $SERVICE"
