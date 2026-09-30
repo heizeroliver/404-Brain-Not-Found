@@ -64,7 +64,11 @@ def fmt_value(value: Any, spec: str | None, lang: str) -> str:
     return str(value)
 
 
+MAX_TEMPLATE_CHARS = 2000
+MAX_VALUE_CHARS = 200
+
+
 def render(template: str, facts: dict[str, Any], lang: str = "en") -> str:
     def repl(m: re.Match[str]) -> str:
-        return fmt_value(facts.get(m.group(1)), m.group(2), lang)
-    return PLACEHOLDER.sub(repl, template)
+        return fmt_value(facts.get(m.group(1)), m.group(2), lang)[:MAX_VALUE_CHARS]
+    return PLACEHOLDER.sub(repl, template[:MAX_TEMPLATE_CHARS])[: MAX_TEMPLATE_CHARS * 2]

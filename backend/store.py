@@ -23,6 +23,10 @@ FeedbackAction = str  # validated by the API model (not_now | not_relevant | nev
 SUPPRESS_DAYS = {"not_now": 14, "not_relevant": 90, "never": 10 ** 6}
 
 
+MAX_LOG_ENTRIES = 20_000
+MAX_DELIVERIES = 20_000
+
+
 class Store:
     def __init__(self, customers_path: Path, decision_log_path: Path | None) -> None:
         self._lock = threading.Lock()
@@ -125,6 +129,8 @@ class Store:
     # ------------------------------------------------------------- deliveries
     def record_delivery(self, customer_id: str, moment_type: str, today: date) -> None:
         with self._lock:
+            if len(self.deliveries) >= MAX_DELIVERIES:
+                del self.deliveries[: len(self.deliveries) - MAX_DELIVERIES + 1]
             self.deliveries.append({"customer_id": customer_id, "moment_type": moment_type,
                                     "date": today.isoformat()})
 
@@ -139,6 +145,8 @@ class Store:
             return
         with self._lock:
             self.decision_log.extend(entries)
+            if len(self.decision_log) > MAX_LOG_ENTRIES:  # bounded memory
+                del self.decision_log[: len(self.decision_log) - MAX_LOG_ENTRIES]
             if self.decision_log_path is not None:
                 try:
                     self.decision_log_path.parent.mkdir(parents=True, exist_ok=True)

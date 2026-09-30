@@ -22,3 +22,6 @@ node_modules/
 .DS_Store
 .idea/
 .vscode/
+
+# design skill installer (local tooling only, not part of the app)
+.claude/
