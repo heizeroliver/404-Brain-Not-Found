@@ -9,6 +9,7 @@ from engine.rules.common import eur
 TYPE = "idle_cash"
 CATEGORY = "sales"
 REQUIRES_INSURANCE_DATA = False
+PROJECTABLE = False  # state-based: only evaluated for today
 MIN_BALANCE = 15000.0
 MONTHS = 6
 

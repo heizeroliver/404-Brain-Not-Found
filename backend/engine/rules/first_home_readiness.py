@@ -13,6 +13,7 @@ from engine.rules.common import eur, years_between
 TYPE = "first_home_readiness"
 CATEGORY = "sales"
 REQUIRES_INSURANCE_DATA = False
+PROJECTABLE = False  # state-based: only evaluated for today
 DUTY = {"flanders": "2% registration duty", "wallonia": "3% registration duty",
         "brussels": "€200,000 abattement on registration duty"}
 DUTY_PCT = {"flanders": 2, "wallonia": 3, "brussels": None}

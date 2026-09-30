@@ -13,6 +13,7 @@ from engine.rules.common import eur, salary_alive, salary_transactions
 TYPE = "holiday_pay"
 CATEGORY = "sales"
 REQUIRES_INSURANCE_DATA = False
+PROJECTABLE = True  # calendar-anchored: can be projected on the 12-month timeline
 LOOKAHEAD_DAYS = 45
 
 

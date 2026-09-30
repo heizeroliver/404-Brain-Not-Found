@@ -9,6 +9,7 @@ from engine.rules.common import eur
 TYPE = "insurance_renewal_increase"
 CATEGORY = "info"
 REQUIRES_INSURANCE_DATA = True
+PROJECTABLE = True  # calendar-anchored: can be projected on the 12-month timeline
 LOOKAHEAD_DAYS = 45
 
 

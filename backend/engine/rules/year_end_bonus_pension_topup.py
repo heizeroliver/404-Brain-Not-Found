@@ -12,6 +12,7 @@ from engine.rules.common import eur, salary_alive
 TYPE = "year_end_bonus_pension_topup"
 CATEGORY = "sales"
 REQUIRES_INSURANCE_DATA = False
+PROJECTABLE = True  # calendar-anchored: can be projected on the 12-month timeline
 RELIEF = {1050: 30, 1350: 25}
 
 

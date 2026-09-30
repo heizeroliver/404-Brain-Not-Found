@@ -9,6 +9,7 @@ from engine.rules.common import add_years
 TYPE = "child_turns_18"
 CATEGORY = "info"
 REQUIRES_INSURANCE_DATA = False
+PROJECTABLE = True  # calendar-anchored: can be projected on the 12-month timeline
 LOOKAHEAD_DAYS = 60
 
 

@@ -238,8 +238,8 @@ def my_timeline(customer_id: str = Depends(auth.current_customer_id)) -> Timelin
     customer = _customer(customer_id)
     today = config.today()
     seen: dict[tuple[str, date], Moment] = {}
-    for step in _month_steps(today):
-        for m in run_rules(customer, step):
+    for i, step in enumerate(_month_steps(today)):
+        for m in run_rules(customer, step, projectable_only=i > 0):
             seen.setdefault((m.type, m.window[1]), m)
     result = arbitrate(customer, list(seen.values()), today, store, record=False)
     entries = []

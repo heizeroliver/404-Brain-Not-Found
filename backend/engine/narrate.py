@@ -187,8 +187,11 @@ def template_narration(moment: Moment, customer: Customer) -> dict[str, str]:
     rule = RULEBOOK.get(moment.type)
     if rule is not None:
         summary = rule.summary.get(lang) or rule.summary["en"]
+        if facts.get("amount") == 0 and rule.summary_zero:
+            summary = rule.summary_zero.get(lang) or rule.summary_zero.get("en") or summary
+        why = rule.why.get(lang) or rule.why.get("en") or GENERIC[lang]["why"]
         cta = rule.cta.get(lang) or rule.cta.get("en") or GENERIC[lang]["cta"]
-        return {"message": render(summary, facts, lang), "why": render(GENERIC[lang]["why"], facts, lang),
+        return {"message": render(summary, facts, lang), "why": render(why, facts, lang),
                 "cta_label": cta, "narrator": "template"}
     # unknown type: show the evidence, never invent
     return {"message": moment.evidence[0], "why": render(GENERIC[lang]["why"], facts, lang),

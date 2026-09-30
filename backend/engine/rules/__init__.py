@@ -21,11 +21,19 @@ LIFE_CALENDAR_RULES: list[ModuleType] = [
 ALL_RULES: list[ModuleType] = [*LIFE_CALENDAR_RULES, rulebook]
 
 
-def run_rules(customer: Customer, today: date, include_world: bool = True) -> list[Moment]:
-    """Run every rule the customer's consents allow."""
+def run_rules(customer: Customer, today: date, include_world: bool = True,
+              projectable_only: bool = False) -> list[Moment]:
+    """Run every rule the customer's consents allow.
+
+    projectable_only=True keeps only calendar-anchored rules (used when `today`
+    is a future date on the 12-month timeline); state-based rules such as
+    idle cash or an income drop are only meaningful for the real today.
+    """
     moments: list[Moment] = []
     for module in ALL_RULES if include_world else LIFE_CALENDAR_RULES:
         if getattr(module, "REQUIRES_INSURANCE_DATA", False) and not customer.consents.use_insurance_data:
+            continue
+        if projectable_only and not getattr(module, "PROJECTABLE", False):
             continue
         moments.extend(module.detect(customer, today))
     return moments

@@ -8,11 +8,12 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from engine.models import Customer, Moment
-from engine.rules.common import eur, salary_transactions
+from engine.rules.common import as_of, eur, salary_transactions
 
 TYPE = "income_drop_care_mode"
 CATEGORY = "care"
 REQUIRES_INSURANCE_DATA = False
+PROJECTABLE = False  # state-based: only evaluated for today, never projected on the timeline
 MIN_GAP_DAYS = 60
 FIXED_COSTS = {"rent", "mortgage", "energy", "telecom", "childcare", "insurance"}
 
@@ -25,11 +26,12 @@ def detect(customer: Customer, today: date) -> list[Moment]:
     if not salaries:
         return []
     last = max(t.date for t in salaries)
-    days = (today - last).days
+    horizon = as_of(customer, today)
+    days = (horizon - last).days
     if days < MIN_GAP_DAYS:
         return []
     benefits = [t for t in customer.transactions if t.category == "benefit" and t.date > last]
-    since = today - timedelta(days=90)
+    since = horizon - timedelta(days=90)
     fixed = sum(-t.amount for t in customer.transactions
                 if t.category in FIXED_COSTS and t.amount < 0 and t.date >= since) / 3.0
     if benefits:

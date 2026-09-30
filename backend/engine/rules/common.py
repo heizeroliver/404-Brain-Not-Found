@@ -14,8 +14,19 @@ def salary_transactions(customer: Customer) -> list[Transaction]:
     return [t for t in customer.transactions if t.category == "salary"]
 
 
+def as_of(customer: Customer, today: date) -> date:
+    """The date the transaction data is current to: never later than the last transaction.
+
+    Lets calendar rules be projected into the future (timeline) without reading
+    the end of the dataset as "income stopped".
+    """
+    if not customer.transactions:
+        return today
+    return min(today, max(t.date for t in customer.transactions))
+
+
 def salary_alive(customer: Customer, today: date, max_gap_days: int = 45) -> bool:
-    """True when the customer is an employee whose salary landed recently."""
+    """True when the customer is an employee whose salary landed recently (as of the data horizon)."""
     emp = customer.employment
     if emp.contract_type not in ("permanent", "temporary") or not emp.employer:
         return False
@@ -23,7 +34,7 @@ def salary_alive(customer: Customer, today: date, max_gap_days: int = 45) -> boo
     if not salaries:
         return False
     last = max(t.date for t in salaries)
-    return 0 <= (today - last).days <= max_gap_days
+    return 0 <= (as_of(customer, today) - last).days <= max_gap_days
 
 
 def add_years(d: date, years: int) -> date:
