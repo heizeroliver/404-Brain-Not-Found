@@ -1,0 +1,23 @@
+# secrets and local config
+.env
+.env.*
+!.env.example
+
+# python
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# generated at runtime
+backend/data/decision_log.jsonl
+*.mp3
+
+# node
+node_modules/
+
+# os / editors
+.DS_Store
+.idea/
+.vscode/
