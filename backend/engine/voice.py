@@ -21,7 +21,10 @@ _cache: dict[str, bytes] = {}
 
 
 def voice_id_for(lang: str) -> str | None:
-    voice = {"nl": config.ELEVENLABS_VOICE_NL, "fr": config.ELEVENLABS_VOICE_FR}.get(lang)
+    voices = {"nl": config.ELEVENLABS_VOICE_NL, "fr": config.ELEVENLABS_VOICE_FR,
+              # the multilingual model speaks English with the Dutch voice when no English voice is set
+              "en": config.ELEVENLABS_VOICE_EN or config.ELEVENLABS_VOICE_NL}
+    voice = voices.get(lang)
     if voice and VOICE_ID.match(voice):
         return voice
     return None

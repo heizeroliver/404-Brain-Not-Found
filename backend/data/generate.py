@@ -219,7 +219,7 @@ def persona_marc(rng: random.Random) -> dict:
     birth = date(1979, 6, 3)
     c = {
         "id": "marc", "name": "Marc Lambert", "first_name": "Marc",
-        "language": "fr", "region": "wallonia", "birthdate": iso(birth),
+        "language": "nl", "region": "brussels", "birthdate": iso(birth),
         "age": years_between(birth, TODAY), "digital_comfort": 3,
         "household": {"partner": True, "children": [
             {"name": "Chloé", "birthdate": "2008-11-12"},

@@ -18,7 +18,7 @@ Stakes = Literal["low", "medium", "high"]
 Channel = Literal["in_app_card", "push", "voice", "advisor", "letter"]
 Source = Literal["life_calendar", "world_rule", "protection"]
 Category = Literal["sales", "info", "care"]
-Language = Literal["nl", "fr"]
+Language = Literal["nl", "fr", "en"]
 Region = Literal["flanders", "wallonia", "brussels"]
 
 FactValue = str | int | float | bool | None
