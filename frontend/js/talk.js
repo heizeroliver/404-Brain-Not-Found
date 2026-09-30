@@ -50,7 +50,7 @@ const CSS = `
 .talk-empty { color: var(--muted); font-size: 14px; }
 @media (max-width: 767px) {
   .talk { padding: 16px 16px 0; min-height: auto; }
-  .talk-composer { position: fixed; left: 0; right: 0; bottom: calc(59px + env(safe-area-inset-bottom)); padding: 8px 16px; z-index: 29; }
+  .talk-composer { position: fixed; left: 0; right: 0; bottom: calc(63px + env(safe-area-inset-bottom)); padding: 8px 16px; z-index: 29; }
   .talk-log { padding-bottom: 80px; }
   .talk-bubble-user { max-width: 88%; }
   .talk-tl li { grid-template-columns: 80px 1fr; }
