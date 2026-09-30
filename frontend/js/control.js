@@ -21,7 +21,8 @@ function has(key) { const v = t(key); return v !== key; }
 function tt(key, fallback, ...args) { const v = t(key, ...args); return v === key ? (fallback ?? key) : v; }
 export function typeLabel(k) { return tt('c_type_' + k, k); }
 const srcLabel = (k) => tt('c_src_' + k, k);
-const chLabel = (k) => tt('c_ch_' + k, k);
+const chLabel = (k) => (k == null ? '–' : tt('c_ch_' + k, k));
+const reasonLabel = (k) => tt('c_reason_' + k, String(k).replace(/_/g, ' '));
 const stLabel = (k) => tt('c_st_' + k, k);
 const rqLabel = (k) => tt('c_rq_' + k, k);
 function safeDate(v, style = 'medium') { if (!v) return '–'; try { return fmtDate(v, style); } catch { return String(v); } }
@@ -284,7 +285,7 @@ function openMoment(r) {
   const c = h('div', 'stack-3');
   const dl = h('dl');
   [[t('c_col_customer'), `${r.customer_name || ''} (${r.customer_id})`], [t('c_col_moment'), typeLabel(r.type)], [t('c_col_source'), srcLabel(r.source)],
-    [t('c_stakes'), r.stakes], [t('c_col_channel'), chLabel(r.channel)], [t('c_delivery'), r.delivery], [t('c_col_status'), stLabel(r.status)], [t('c_col_window'), fmtWindow(r.window)]]
+    [t('c_stakes'), r.stakes], [t('c_col_channel'), chLabel(r.channel)], [t('c_delivery'), r.delivery], [t('c_col_status'), stLabel(r.status)], ...(r.reason ? [[t('c_col_reason'), reasonLabel(r.reason)]] : []), [t('c_col_window'), fmtWindow(r.window)]]
     .forEach(([k, v]) => add(dl, h('dt', 'label', k), h('dd', '', str(v))));
   add(c, dl, h('h3', 'section-title', t('c_evidence')));
   const ev = h('ul');
@@ -369,10 +370,10 @@ function viewRules(panel) {
     const base = tpl.rule || tpl.defaults || tpl.template || tpl.example || tpl;
     const meta = { ...tpl };
     const fields = pickList(tpl.allowed_fields, tpl.condition_fields, tpl.fields && tpl.fields.condition_fields, tpl.fields && tpl.fields.conditions && tpl.fields.conditions.fields, tpl.fields && tpl.fields.fields) || [];
-    const ops = pickList(tpl.allowed_ops, tpl.ops, tpl.operators, tpl.fields && tpl.fields.ops, tpl.fields && tpl.fields.conditions && tpl.fields.conditions.ops) || DEFAULT_OPS.map((o) => [o, o]);
+    const ops = pickList(tpl.condition_ops, tpl.allowed_ops, tpl.ops, tpl.operators, tpl.fields && tpl.fields.ops, tpl.fields && tpl.fields.conditions && tpl.fields.conditions.ops) || DEFAULT_OPS.map((o) => [o, o]);
     if (!rule) {
       rule = JSON.parse(JSON.stringify(base));
-      ['illustrative', 'allowed_fields', 'allowed_ops', 'fields', 'ops', 'operators', 'condition_fields', 'rule', 'defaults', 'template', 'example'].forEach((k) => { if (base === tpl) delete rule[k]; });
+      ['illustrative', 'note', 'form_fields', 'levels', 'stakes', 'impact_kinds', 'condition_ops', 'allowed_fields', 'allowed_ops', 'fields', 'ops', 'operators', 'condition_fields', 'rule', 'defaults', 'template', 'example'].forEach((k) => { if (base === tpl) delete rule[k]; });
       rule.title = rule.title || {}; rule.summary = rule.summary || {};
       rule.conditions = Array.isArray(rule.conditions) && rule.conditions.length ? rule.conditions : [{ field: (fields[0] || ['savings_balance'])[0], op: 'gt', value: 0 }];
     }
@@ -464,6 +465,8 @@ function drawRules(slot) {
       clear(resultBox);
       const c = card(null);
       add(c, h('p', 'tag tag-info', t('c_preview_only')), h('p', 'metric-value num', t('c_affected', num(d.affected), num(d.total))));
+      if (d.total_impact != null) c.appendChild(h('p', 'num', t('c_total_impact') + ': ' + (typeof d.total_impact === 'number' ? fmtEur(d.total_impact) : str(d.total_impact))));
+      if (d.visible_today === false) c.appendChild(h('p', 'muted', t('c_not_visible_today', safeDate(rule.visible_from || rule.effective_date, 'long'))));
       if (d.changes_summary) {
         c.appendChild(h('h3', 'label', t('c_changes')));
         c.appendChild(typeof d.changes_summary === 'object' ? kvTable(d.changes_summary) : h('p', '', String(d.changes_summary)));
@@ -502,9 +505,17 @@ function viewAudit(panel, params) {
   panel.appendChild(slot);
   load(slot, () => api('/admin/v2/audit' + qs({ ...f, page_size: 25 })), (d) => {
     const top = grid(320);
-    const sup = (d.suppressed_by_reason || []).map((r) => ({ key: r.key, label: String(r.key).replace(/_/g, ' '), value: r.value }));
-    add(top, card(t('c_consents'), kvTable(d.consents, t('c_consents'))), card(t('c_feedback'), kvTable(d.feedback, t('c_feedback'))),
-      card(t('c_suppressed_reason'), sup.length ? distribution(sup, { label: t('c_suppressed_reason') }) : empty()));
+    const all = d.suppressed_by_reason || [];
+    const sup = all.filter((r) => r.key !== 'frequency_cap').map((r) => ({ key: r.key, label: reasonLabel(r.key), value: r.value }));
+    const deferred = all.find((r) => r.key === 'frequency_cap');
+    const supCard = card(t('c_suppressed_reason'), sup.length ? distribution(sup, { label: t('c_suppressed_reason') }) : empty());
+    if (deferred) {
+      const dv = h('div', 'stack-1');
+      Object.assign(dv.style, { borderTop: '1px solid var(--line, #E3E8EF)', paddingTop: '12px' });
+      add(dv, h('p', 'label', reasonLabel('frequency_cap') + ': ' + num(deferred.value)), h('p', 'muted', t('c_deferred_note')));
+      supCard.appendChild(dv);
+    }
+    add(top, card(t('c_consents'), kvTable(d.consents, t('c_consents'))), card(t('c_feedback'), kvTable(d.feedback, t('c_feedback'))), supCard);
     const log = d.log || { items: [], total: 0, page: 1 };
     const items = log.items || [];
     const bar = row();

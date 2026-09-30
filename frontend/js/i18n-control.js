@@ -1,5 +1,9 @@
 // Control-room strings (nl default, en, fr). Keys prefixed "c_" to avoid clashes.
 const nl = {
+  c_total_impact: "Totale impact", c_not_visible_today: (d) => `Van kracht vanaf ${d}, vandaag nog geen momenten.`,
+  c_deferred_note: "Uitgesteld naar later deze week, niet geschrapt.",
+  c_reason_frequency_cap: "Uitgesteld (max. 1 per week)", c_reason_marketing_consent_off: "Geen marketingtoestemming",
+  c_reason_care_mode: "Zorgmodus", c_reason_customer_feedback: "Feedback van klant", c_reason_window_expired: "Periode verlopen",
   c_title: "Control room",
   c_cohort: (n) => `${n} fictieve klanten`,
   c_demo_date: (d) => `Demodatum ${d}`,
@@ -57,6 +61,10 @@ const nl = {
 };
 
 const en = {
+  c_total_impact: "Total impact", c_not_visible_today: (d) => `Effective from ${d}, no moments today.`,
+  c_deferred_note: "Deferred to later this week, not dropped.",
+  c_reason_frequency_cap: "Deferred (max 1 per week)", c_reason_marketing_consent_off: "Marketing consent off",
+  c_reason_care_mode: "Care mode", c_reason_customer_feedback: "Customer feedback", c_reason_window_expired: "Window expired",
   c_title: "Control room",
   c_cohort: (n) => `${n} fictional customers`,
   c_demo_date: (d) => `Demo date ${d}`,
@@ -114,6 +122,10 @@ const en = {
 };
 
 const fr = {
+  c_total_impact: "Impact total", c_not_visible_today: (d) => `En vigueur à partir du ${d}, aucun moment aujourd'hui.`,
+  c_deferred_note: "Reporté à plus tard cette semaine, pas supprimé.",
+  c_reason_frequency_cap: "Reporté (max. 1 par semaine)", c_reason_marketing_consent_off: "Pas de consentement marketing",
+  c_reason_care_mode: "Mode protection", c_reason_customer_feedback: "Retour du client", c_reason_window_expired: "Période expirée",
   c_title: "Salle de contrôle",
   c_cohort: (n) => `${n} clients fictifs`,
   c_demo_date: (d) => `Date de démo ${d}`,
