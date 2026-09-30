@@ -219,7 +219,7 @@ def persona_marc(rng: random.Random) -> dict:
     birth = date(1979, 6, 3)
     c = {
         "id": "marc", "name": "Marc Lambert", "first_name": "Marc",
-        "language": "fr", "region": "wallonia", "birthdate": iso(birth),
+        "language": "nl", "region": "brussels", "birthdate": iso(birth),
         "age": years_between(birth, TODAY), "digital_comfort": 3,
         "household": {"partner": True, "children": [
             {"name": "Chloé", "birthdate": "2008-11-12"},
@@ -270,8 +270,13 @@ def persona_rita(rng: random.Random) -> dict:
             {"kind": "family", "renewal_date": "2027-04-10", "premium": 105.0, "new_premium": 109.0},
             {"kind": "hospitalisation", "renewal_date": "2027-07-01", "premium": 620.0, "new_premium": 690.0},
         ],
-        "products": {"mortgage": None, "pension_saving": None, "bolero": None},
+        "products": {"mortgage": None, "pension_saving": None, "bolero": None,
+                     "term_account": {"amount": 25000.0, "maturity_date": "2026-10-20", "rate": 2.1}},
         "consents": {"use_insurance_data": True, "use_other_banks": False, "marketing": True},
+        "security": {"guardian_angel_active": False,
+                     "recent_alert": {"kind": "vop_close_match", "date": "2026-09-28", "amount": 900.0,
+                                      "payee_shown": "KBC Veiligheidsdienst",
+                                      "payee_registered": "J. Peeters"}},
     }
     c["transactions"] = build_transactions(rng, c, {"energy_base": 150.0,
                                                      "energy_spike_from": date(2026, 6, 1),
@@ -282,6 +287,16 @@ def persona_rita(rng: random.Random) -> dict:
 # ----------------------------------------------------------------------------
 # Generated customers
 # ----------------------------------------------------------------------------
+
+def _term_account(n: int) -> dict | None:
+    """About one in six customers holds a term account; separate RNG keeps the main sequence stable."""
+    r = random.Random(10_000 + n)
+    if r.random() > 0.17:
+        return None
+    return {"amount": float(r.choice([5000, 10000, 15000, 20000, 30000, 50000])),
+            "maturity_date": iso(TODAY + timedelta(days=r.randint(5, 330))),
+            "rate": round(r.uniform(1.6, 2.4), 2)}
+
 
 def generate_customer(rng: random.Random, n: int, special: str | None) -> dict:
     lang = "nl" if rng.random() < 0.6 else "fr"
@@ -426,7 +441,8 @@ def generate_customer(rng: random.Random, n: int, special: str | None) -> dict:
         "digital_comfort": comfort,
         "household": {"partner": partner, "children": children},
         "employment": emp, "accounts": accounts, "housing": housing, "policies": policies,
-        "products": {"mortgage": mortgage, "pension_saving": pension_saving, "bolero": bolero},
+        "products": {"mortgage": mortgage, "pension_saving": pension_saving, "bolero": bolero,
+                     "term_account": _term_account(n)},
         "consents": consents,
     }
     opts: dict = {}

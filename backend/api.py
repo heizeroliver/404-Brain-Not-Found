@@ -20,7 +20,7 @@ from collections import Counter
 from datetime import date, datetime, timezone
 from typing import Any, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Path, Request, Response, status
+from fastapi import Depends, FastAPI, HTTPException, Path, Query, Request, Response, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -160,6 +160,15 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
+AppLanguage = Literal["nl", "en", "fr"]
+LANG_QUERY = Query("nl", description="App language: Dutch (default), English or French")
+
+
+def _in_language(customer: Customer, lang: AppLanguage) -> Customer:
+    """The app speaks NL, EN or FR; the customer's record is not changed."""
+    return customer.model_copy(update={"language": lang})
+
+
 def _customer(customer_id: str) -> Customer:
     customer = store.get_customer(customer_id)
     if customer is None:
@@ -228,8 +237,9 @@ def me(customer_id: str = Depends(auth.current_customer_id)) -> dict[str, Any]:
 
 
 @app.get("/me/moments", response_model=MomentsResponse)
-def my_moments(customer_id: str = Depends(auth.current_customer_id)) -> MomentsResponse:
-    customer = _customer(customer_id)
+def my_moments(customer_id: str = Depends(auth.current_customer_id),
+               lang: AppLanguage = LANG_QUERY) -> MomentsResponse:
+    customer = _in_language(_customer(customer_id), lang)
     today = config.today()
     result = _feed(customer, today, record=True)
     return MomentsResponse(today=today, care_mode=result.care_mode,
@@ -238,8 +248,9 @@ def my_moments(customer_id: str = Depends(auth.current_customer_id)) -> MomentsR
 
 
 @app.get("/me/timeline", response_model=TimelineResponse)
-def my_timeline(customer_id: str = Depends(auth.current_customer_id)) -> TimelineResponse:
-    customer = _customer(customer_id)
+def my_timeline(customer_id: str = Depends(auth.current_customer_id),
+                lang: AppLanguage = LANG_QUERY) -> TimelineResponse:
+    customer = _in_language(_customer(customer_id), lang)
     today = config.today()
     seen: dict[tuple[str, date], Moment] = {}
     for i, step in enumerate(_month_steps(today)):
@@ -285,8 +296,9 @@ def update_consents(body: Consents, customer_id: str = Depends(auth.current_cust
 @app.get("/me/voice/{moment_type}")
 @limiter.limit(config.VOICE_RATE_LIMIT)
 def my_voice(request: Request, moment_type: str = Path(pattern=r"^[a-z0-9_]{3,60}$"),
-             customer_id: str = Depends(auth.current_customer_id)) -> Response:
-    customer = _customer(customer_id)
+             customer_id: str = Depends(auth.current_customer_id),
+             lang: AppLanguage = LANG_QUERY) -> Response:
+    customer = _in_language(_customer(customer_id), lang)
     result = _feed(customer, config.today(), record=False)
     match = next((rm for rm in result.ranked if rm.moment.type == moment_type), None)
     if match is None:

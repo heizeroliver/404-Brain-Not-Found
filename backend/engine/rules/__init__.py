@@ -5,8 +5,9 @@ from datetime import date
 from types import ModuleType
 
 from engine.models import Customer, Moment
-from engine.rules import (child_turns_18, first_home_readiness, holiday_pay, idle_cash,
-                          income_drop_care_mode, insurance_renewal_increase, rulebook,
+from engine.rules import (child_turns_18, energy_bill_spike, first_home_readiness, holiday_pay,
+                          idle_cash, income_drop_care_mode, insurance_renewal_increase,
+                          payment_protection, rulebook, term_account_maturity,
                           year_end_bonus_pension_topup)
 
 LIFE_CALENDAR_RULES: list[ModuleType] = [
@@ -17,6 +18,9 @@ LIFE_CALENDAR_RULES: list[ModuleType] = [
     first_home_readiness,
     child_turns_18,
     income_drop_care_mode,
+    term_account_maturity,
+    energy_bill_spike,
+    payment_protection,
 ]
 ALL_RULES: list[ModuleType] = [*LIFE_CALENDAR_RULES, rulebook]
 
