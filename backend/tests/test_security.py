@@ -50,7 +50,7 @@ def test_wrong_password_and_unknown_user_are_indistinguishable(client):
 
 def test_forged_tampered_and_expired_tokens_are_rejected(client):
     forged = jwt.encode({"sub": "admin", "role": "admin", "iat": int(time.time()), "exp": int(time.time()) + 600,
-                         "iss": "kate-foresight"}, "wrong-secret", algorithm="HS256")
+                         "iss": "kate-foresight"}, "wrong-secret-that-is-long-enough-0123456789abcdef", algorithm="HS256")
     assert client.get("/admin/overview", headers={"Authorization": f"Bearer {forged}"}).status_code == 401
     expired = jwt.encode({"sub": "lien", "role": "customer", "iat": int(time.time()) - 7200,
                           "exp": int(time.time()) - 3600, "iss": "kate-foresight"}, auth._SECRET, algorithm="HS256")
