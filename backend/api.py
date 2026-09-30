@@ -247,7 +247,7 @@ def _feed(customer: Customer, today: date, record: bool) -> ArbitrationResult:
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    return {"status": "ok", "customers": len(store.customers), "narration": gemini_backend() or "template"}
+    return {"status": "ok" if store.customers else "no_data"}  # no configuration or secrets here
 
 
 @app.post("/login", response_model=LoginResponse)
