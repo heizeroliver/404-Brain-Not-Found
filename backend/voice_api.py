@@ -127,7 +127,7 @@ def _evaluate(items: list[Any]) -> float:
             total += (cur or 1) * 1000
             cur = 0.0
         elif item == "M":
-            total = (total + (cur or 1)) * 1_000_000 if total < 1000 else total + (cur or 1) * 1_000_000
+            total += (cur or 1) * 1_000_000
             cur = 0.0
         elif item == 20 and prev == 4:  # quatre-vingt(s) = 80
             cur += 80 - 4
@@ -168,7 +168,7 @@ def parse_amounts(text: str) -> list[float]:
             continue
         morphs = [_WORDS[p] for p in parts if p != "en"]
         # after a digit only a multiplier may continue the run ("8 duizend", "8 thousand")
-        if items and isinstance(items[-1], float) and len(items) == 1 and words[0][0].isdigit() and morphs[0] not in ("H", "T", "M"):
+        if len(items) == 1 and words[0][0].isdigit() and morphs[0] not in ("H", "T", "M"):
             flush()
         items.extend(morphs)
         words.append(token)
