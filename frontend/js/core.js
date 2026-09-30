@@ -24,7 +24,7 @@ export function t(key, ...args) {
 
 registerStrings({
   nl: {
-    brand: "Kate Foresight", proto: "Prototype · fictieve data", logout: "Afmelden",
+    brand: "Kate Foresight", proto: "Prototype voor de KBC-case · fictieve data", logout: "Afmelden",
     lang_group: "Taal", login_title: "Wie opent de app?", login_sub: "Kies een fictieve klant en open de app zoals die klant hem ziet.",
     persona: "Persona", password: "Demowachtwoord", open_app: "Open de app",
     invalid: "Ongeldige gegevens.", login_fail: "Aanmelden mislukt: ", session_expired: "Je sessie is verlopen. Meld je opnieuw aan.",
@@ -34,7 +34,7 @@ registerStrings({
     chart_total: "Totaal", chart_value: "Waarde", chart_share: "Aandeel", chart_item: "Onderdeel",
   },
   en: {
-    brand: "Kate Foresight", proto: "Prototype · synthetic data", logout: "Log out",
+    brand: "Kate Foresight", proto: "Prototype for the KBC case · synthetic data", logout: "Log out",
     lang_group: "Language", login_title: "Who is opening the app?", login_sub: "Pick a fictional customer and open the app the way they see it.",
     persona: "Persona", password: "Demo password", open_app: "Open the app",
     invalid: "Invalid credentials.", login_fail: "Login failed: ", session_expired: "Your session expired. Please log in again.",
@@ -44,7 +44,7 @@ registerStrings({
     chart_total: "Total", chart_value: "Value", chart_share: "Share", chart_item: "Item",
   },
   fr: {
-    brand: "Kate Foresight", proto: "Prototype · données fictives", logout: "Se déconnecter",
+    brand: "Kate Foresight", proto: "Prototype pour le cas KBC · données fictives", logout: "Se déconnecter",
     lang_group: "Langue", login_title: "Qui ouvre l'app ?", login_sub: "Choisissez un client fictif et ouvrez l'app comme il la voit.",
     persona: "Persona", password: "Mot de passe démo", open_app: "Ouvrir l'app",
     invalid: "Identifiants invalides.", login_fail: "Connexion impossible : ", session_expired: "Votre session a expiré. Reconnectez-vous.",
