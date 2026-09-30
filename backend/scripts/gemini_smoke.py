@@ -70,11 +70,43 @@ def show_policy(project: str) -> None:
     print(json.dumps(data, indent=2)[:3000])
 
 
+def try_api_key() -> bool:
+    """Gemini Developer API path (Google AI Studio key), independent of the GCP org policy."""
+    key = os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if not key:
+        return False
+    from google import genai
+
+    client = genai.Client(api_key=key)
+    print("GEMINI_API_KEY found: testing the Gemini Developer API (no GCP project needed).")
+    try:
+        names = [m.name.split("/")[-1] for m in client.models.list()]
+        print("  Models visible with this key: " + ", ".join(names[:40]))
+    except Exception as exc:  # noqa: BLE001
+        print(f"  (could not list models: {str(exc)[:160]})")
+        names = []
+    candidates = [n for n in names if "flash" in n and "image" not in n and "tts" not in n and "live" not in n]
+    for model in candidates[:6] + ["gemini-2.5-flash", "gemini-2.0-flash"]:
+        try:
+            reply = client.models.generate_content(model=model, contents=PROMPT)
+            print(f"  {model:28s} -> OK: {(reply.text or '').strip()[:120]}")
+            print("\nPut these in backend/.env (key stays out of git):")
+            print("GEMINI_API_KEY=<your key>")
+            print(f"GEMINI_MODEL={model}")
+            return True
+        except Exception as exc:  # noqa: BLE001
+            print(f"  {model:28s} -> no ({str(exc).splitlines()[0][:100]})")
+    return False
+
+
 def main() -> None:
     try:
         from google import genai
     except ImportError:
         sys.exit("Run first: pip install -q google-genai")
+
+    if try_api_key():
+        return
 
     project = project_id()
     print(f"Project: {project}")
