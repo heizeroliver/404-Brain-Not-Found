@@ -48,4 +48,6 @@ def _reset_state():
     store.feedback.clear()
     store.deliveries.clear()
     store.goals.clear()
+    import requests_store
+    requests_store.reset()
     RULEBOOK.reset()

@@ -3,6 +3,8 @@
 #   git clone https://github.com/heizeroliver/404-Brain-Not-Found && cd 404-Brain-Not-Found
 #   bash scripts/deploy_cloud_run.sh
 # Secrets are generated here and set on the service; they are printed once and never written to the repo.
+# One instance on purpose: goals, consents, feedback, requests and added rules live in process memory,
+# so several instances would diverge and a restart resets the demo. Production needs shared storage.
 set -euo pipefail
 PROJECT="${PROJECT:-$(gcloud config get-value project 2>/dev/null)}"
 if [ -z "$PROJECT" ]; then
@@ -20,7 +22,7 @@ DEMO_PASSWORD="kate-$(openssl rand -hex 4)"
 ADMIN_PASSWORD="admin-$(openssl rand -hex 6)"
 
 gcloud run deploy "$SERVICE" --source . --region "$REGION" --allow-unauthenticated \
-  --memory 512Mi --max-instances 3 \
+  --memory 512Mi --max-instances 1 \
   --set-env-vars "APP_ENV=production,DEMO_TODAY=2026-09-30,JWT_SECRET=${JWT_SECRET},DEMO_PASSWORD=${DEMO_PASSWORD},ADMIN_PASSWORD=${ADMIN_PASSWORD}"
 
 URL="$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')"

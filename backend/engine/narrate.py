@@ -103,17 +103,16 @@ TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     },
     "term_account_maturity": {
         "nl": {"message": "Je termijnrekening van €{amount} vervalt op {maturity_date}, over {days} dagen. Kies je niets, dan gaat het "
-                          "geld naar je zichtrekening, waar het niets opbrengt. Wil je vernieuwen, of zal ik drie veilige opties tonen?",
+                          "geld naar je zichtrekening, waar het niets opbrengt. Wil je vernieuwen, of wil je met een adviseur je opties bekijken?",
                "why": "Je contract vermeldt {maturity_date} als vervaldatum.",
                "cta": "Kies wat ermee gebeurt"},
         "fr": {"message": "Votre compte à terme de {amount} € arrive à échéance le {maturity_date}, dans {days} jours. Sans choix de "
-                          "votre part, l'argent revient sur votre compte à vue, où il ne rapporte rien. Le renouveler, ou voir trois "
-                          "options sûres ?",
+                          "votre part, l'argent revient sur votre compte à vue, où il ne rapporte rien. Le renouveler, ou en parler "
+                          "avec un conseiller ?",
                "why": "Votre contrat mentionne l'échéance du {maturity_date}.",
                "cta": "Choisir la suite"},
         "en": {"message": "Your term account of €{amount} matures on {maturity_date}, in {days} days. If you don't choose, the money "
-                          "goes back to your current account, where it earns nothing. Would you like to renew, or see three safe "
-                          "options?",
+                          "goes back to your current account, where it earns nothing. Would you like to renew, or go through your options with an adviser?",
                "why": "Your contract shows {maturity_date} as the maturity date.",
                "cta": "Decide what happens next"},
     },
@@ -149,18 +148,18 @@ TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
     },
     "idle_cash": {
         "nl": {"message": "Op je spaarrekening staat €{balance}: al {months} maanden ruim meer dan een buffer van zes maanden inkomen. "
-                          "Zo'n €{idle} zou meer kunnen opbrengen. Zal ik drie veilige opties tonen, zonder verplichting?",
+                          "Zo'n €{idle} zou meer kunnen opbrengen. Wil je eerst aangeven wat je opzij wil houden?",
                "why": "Je spaarsaldo lag {months} maanden lang boven zes keer je nettomaandinkomen.",
-               "cta": "Bekijk drie veilige opties"},
+               "cta": "Plan je spaargeld"},
         "fr": {"message": "Votre compte d'épargne affiche {balance} €, soit depuis {months} mois bien plus qu'une réserve de six mois "
-                          "de revenus. Environ {idle} € pourraient vous rapporter davantage. Voulez-vous voir trois options sûres, sans"
+                          "de revenus. Environ {idle} € pourraient vous rapporter davantage. Voulez-vous d'abord indiquer ce que vous souhaitez garder de côté, sans"
                           " engagement ?",
                "why": "Depuis {months} mois, votre épargne dépasse six fois votre revenu mensuel net.",
-               "cta": "Voir trois options sûres"},
+               "cta": "Planifier mon épargne"},
         "en": {"message": "Your savings account holds €{balance}, well above a six-month income buffer for {months} months now. About "
-                          "€{idle} could be earning more for you. Shall I show you three safe options, with no obligation?",
+                          "€{idle} could be earning more for you. Would you like to say first what you want to keep aside?",
                "why": "Your savings have stayed above six times your net monthly income for {months} months.",
-               "cta": "See three safe options"},
+               "cta": "Plan my savings"},
     },
     "first_home_readiness": {
         "nl": {"message": "Je huurt al {years_renting} jaar en hebt €{savings} gespaard. Een eigen woning is misschien dichterbij dan "
