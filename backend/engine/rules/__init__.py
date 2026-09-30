@@ -1,0 +1,31 @@
+"""Rule registry: one module per moment, each exposing detect(customer, today) -> list[Moment]."""
+from __future__ import annotations
+
+from datetime import date
+from types import ModuleType
+
+from engine.models import Customer, Moment
+from engine.rules import (child_turns_18, first_home_readiness, holiday_pay, idle_cash,
+                          income_drop_care_mode, insurance_renewal_increase, rulebook,
+                          year_end_bonus_pension_topup)
+
+LIFE_CALENDAR_RULES: list[ModuleType] = [
+    holiday_pay,
+    year_end_bonus_pension_topup,
+    insurance_renewal_increase,
+    idle_cash,
+    first_home_readiness,
+    child_turns_18,
+    income_drop_care_mode,
+]
+ALL_RULES: list[ModuleType] = [*LIFE_CALENDAR_RULES, rulebook]
+
+
+def run_rules(customer: Customer, today: date, include_world: bool = True) -> list[Moment]:
+    """Run every rule the customer's consents allow."""
+    moments: list[Moment] = []
+    for module in ALL_RULES if include_world else LIFE_CALENDAR_RULES:
+        if getattr(module, "REQUIRES_INSURANCE_DATA", False) and not customer.consents.use_insurance_data:
+            continue
+        moments.extend(module.detect(customer, today))
+    return moments
