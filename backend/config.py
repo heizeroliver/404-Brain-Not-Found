@@ -98,3 +98,10 @@ ELEVENLABS_VOICE_EN = _env("ELEVENLABS_VOICE_EN")
 # Optional: ElevenLabs conversational agent id ("Talk to Kate"); public agent id, not a secret
 ELEVENLABS_AGENT_ID = _env("ELEVENLABS_AGENT_ID")
 ELEVENLABS_MODEL = _env("ELEVENLABS_MODEL", "eleven_multilingual_v2")
+
+# Durable shared state (goals, consents, advisor requests). "memory" (default, tests, local dev:
+# a restart resets everything) or "firestore" (Cloud Run: default credentials = the service
+# identity, project from GOOGLE_CLOUD_PROJECT). See persistence.py.
+STORAGE = (_env("STORAGE", "memory") or "memory").lower()
+GOOGLE_CLOUD_PROJECT = _env("GOOGLE_CLOUD_PROJECT")
+FIRESTORE_DATABASE = _env("FIRESTORE_DATABASE", "(default)")

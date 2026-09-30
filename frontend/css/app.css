@@ -1,3 +1,8 @@
+@font-face {
+  font-family: "Nunito Sans"; font-style: normal; font-weight: 400 800; font-display: swap;
+  src: url("../assets/fonts/nunito-sans-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 /* Kate Foresight design system. Tokens from design-system/kate-foresight/MASTER.md (override block). */
 :root {
   --navy: #0B325E; --navy-hover: #08264A;
@@ -11,7 +16,8 @@
   --radius-card: 12px; --radius-ctl: 10px;
   --shadow: 0 1px 2px rgba(15, 27, 45, .06);
   --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px;
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  /* KBC's corporate face is Museo Sans (commercial); Nunito Sans (OFL, self-hosted) is the closest free match */
+  --font: "Nunito Sans", "Museo Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   --header-h: 64px;
 }
 *, *::before, *::after { box-sizing: border-box; }
@@ -254,3 +260,47 @@ body.has-bottom-nav #toast-root { bottom: 88px; }
 .grid-metrics { gap: var(--s4); }
 @media (max-width: 599px) { .layout-2col > * > * + * { margin-top: var(--s4); } }
 .btn + .btn, .btn-quiet + .btn-quiet { margin-top: 0 !important; }
+
+/* ---- money calendar (customer timeline) ---- */
+.cal-chips { display: flex; flex-wrap: wrap; gap: var(--s2); }
+.cal-chip-count { font-size: 12px; font-variant-numeric: tabular-nums; padding: 0 6px; border-radius: 999px; background: var(--canvas); color: var(--muted); }
+.chip[aria-pressed="true"] .cal-chip-count { background: rgba(255, 255, 255, .18); color: #fff; }
+.cal-month { display: flex; flex-direction: column; gap: var(--s2); }
+.cal-month-head { position: sticky; top: var(--header-h); z-index: 2; margin: 0; padding: var(--s2) 0; background: var(--canvas); font-size: 15px; font-weight: 700; color: var(--navy); }
+.cal-list { list-style: none; margin: 0; padding: 0; }
+.cal-list.card { padding: 0; }
+.cal-row { display: flex; gap: var(--s4); align-items: flex-start; padding: var(--s4); border-top: 1px solid var(--line); }
+.cal-row:first-child { border-top: 0; }
+.cal-next .cal-row { padding: 0; }
+.cal-date { flex: none; width: 56px; min-height: 56px; border-radius: var(--radius-ctl); background: var(--blue-soft); color: var(--navy); display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; text-align: center; }
+.cal-row-next .cal-date { background: var(--navy); color: #fff; }
+.cal-date-day { font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.cal-date-mon { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; }
+.cal-date-range-to { font-size: 11px; font-weight: 600; text-transform: uppercase; opacity: .85; }
+.cal-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.cal-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.cal-tag { display: inline-flex; align-items: center; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--canvas); color: var(--muted); border: 1px solid var(--line); }
+.cal-tag-you { background: var(--blue-soft); color: var(--navy); border-color: transparent; }
+.cal-tag-basis { background: var(--surface); }
+.cal-title { font-weight: 600; color: var(--ink); overflow-wrap: anywhere; }
+.cal-when { font-size: 13px; }
+.cal-what { margin: 0; font-size: 14px; color: var(--ink); }
+.cal-tip { margin: 0; font-size: 14px; padding: var(--s2) var(--s3); border-radius: var(--radius-ctl); background: var(--canvas); color: var(--ink); }
+.cal-tip-label { color: var(--navy); }
+.cal-src { font-size: 12px; }
+.cal-disclaimer { font-size: 13px; }
+@media (max-width: 480px) {
+  .cal-row { gap: var(--s3); padding: var(--s3); }
+  .cal-date { width: 48px; min-height: 48px; }
+  .cal-date-day { font-size: 18px; }
+}
+
+/* spacing: generic stack steps used by newer sections, and calendar rhythm */
+.stack-6 > * + * { margin-top: var(--s5); }
+.cal > h1 + p { margin-top: var(--s2); }
+.cal-chips { margin-top: var(--s5); }
+.cal-month { margin-top: var(--s6); }
+.cal-month-head { padding: var(--s2) 0 var(--s3); }
+.cal-next { padding: var(--s5); }
+.cal-next .cal-row { gap: var(--s4); }
+.cal-body { gap: 6px; }

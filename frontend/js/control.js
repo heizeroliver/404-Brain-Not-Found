@@ -88,7 +88,7 @@ function table(cols, rows, { onRow, caption } = {}) {
     if (onRow) {
       row.tabIndex = 0; row.style.cursor = 'pointer';
       row.addEventListener('click', () => onRow(r, row));
-      row.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRow(r, row); } });
+      row.addEventListener('keydown', (e) => { if (e.target !== row) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRow(r, row); } });
     }
     body.appendChild(row);
   });
@@ -288,6 +288,7 @@ function viewMoments(panel, params) {
 }
 function openMoment(r) {
   const c = h('div', 'stack-3');
+  c.appendChild(receiptCard(r.customer_id));
   const dl = h('dl');
   [[t('c_col_customer'), `${r.customer_name || ''} (${r.customer_id})`], [t('c_col_moment'), typeLabel(r.type)], [t('c_col_source'), srcLabel(r.source)],
     [t('c_stakes'), r.stakes], [t('c_col_channel'), chLabel(r.channel)], [t('c_delivery'), r.delivery], [t('c_col_status'), stLabel(r.status)], ...(r.reason ? [[t('c_col_reason'), reasonLabel(r.reason)]] : []), [t('c_col_window'), fmtWindow(r.window)]]
@@ -301,6 +302,42 @@ function openMoment(r) {
   (r.decision_path || []).forEach((s) => ol.appendChild(h('li', '', str(s))));
   c.appendChild((r.decision_path || []).length ? ol : empty());
   openPanel({ title: `${typeLabel(r.type)} · ${r.customer_name || r.customer_id}`, content: c });
+}
+
+
+// ---------------------------------------------------------------- decision receipt
+// Built only from what /admin/v2/customers/{id}/receipt returns (arbitration records + advisor requests).
+const rcReason = (k, raw) => tt('c_rc_r_' + k, raw || reasonLabel(k));
+function receiptCard(customerId) {
+  const box = h('section', 'card stack-3', null, { 'aria-label': t('c_rc_title') });
+  box.style.padding = '16px';
+  add(box, h('h3', 'section-title', t('c_rc_title')), h('p', 'muted small', t('c_rc_hint')));
+  const slot = h('div');
+  box.appendChild(slot);
+  load(slot, () => api('/admin/v2/customers/' + encodeURIComponent(customerId) + '/receipt'), (d) => {
+    const dl = h('dl');
+    const item = (k, ...vals) => { const dd = h('dd'); dd.style.margin = '0 0 12px'; add(dd, vals.map((v) => (v instanceof Node ? v : h('div', '', str(v))))); add(dl, h('dt', 'label', k), dd); };
+    const code = (c) => h('div', 'muted small', t('c_rc_code') + ': ' + c);
+    const sit = d.situation;
+    item(t('c_rc_situation'), sit ? typeLabel(sit.type) : t('c_rc_none'), ...(sit && sit.category === 'care' ? [h('div', 'muted', t('c_rc_care_note'))] : []));
+    const sh = d.shown;
+    item(t('c_rc_shown'), sh ? typeLabel(sh.type) : t('c_rc_none'), ...(sh && sh.reason ? [code(sh.reason)] : []),
+      ...((d.also_shown || []).length ? [h('div', 'muted small', t('c_rc_also') + ': ' + d.also_shown.map(typeLabel).join(', '))] : []));
+    const wh = d.withheld || [];
+    item(t('c_rc_withheld'), wh.length ? wh.map((w) => typeLabel(w.type)).join(', ') : t('c_rc_none'));
+    const keys = [...new Map(wh.map((w) => [w.reason_key, w.reason])).entries()];
+    item(t('c_rc_reason'), ...(keys.length ? keys.flatMap(([k, raw]) => [h('div', '', rcReason(k, raw)), code(k + ' · ' + raw)]) : [t('c_rc_none')]));
+    const df = d.deferred || [];
+    if (df.length) item(t('c_rc_deferred'), df.map((x) => typeLabel(x.type)).join(', '), h('div', 'muted small', rcReason('frequency_cap')));
+    item(t('c_rc_channel'), chLabel(d.channel), ...(sh && sh.channel_reason ? [code(sh.channel_reason)] : []));
+    const rq = d.advisor_requests || [];
+    item(t('c_rc_request'), ...(rq.length ? rq.map((r) => h('div', '', `${r.id} · ${rqLabel(r.status)} · ${typeLabel(r.moment_type)}`)) : [t('c_rc_none_requested')]));
+    slot.appendChild(dl);
+  });
+  return box;
+}
+function openReceipt(customerId, name) {
+  openPanel({ title: `${t('c_rc_title')} · ${name || customerId}`, content: add(h('div', 'stack-3'), receiptCard(customerId)) });
 }
 
 // ---------------------------------------------------------------- queue
@@ -330,7 +367,8 @@ function viewQueue(panel, params) {
         const w = row(8);
         const act = (label, to) => {
           const b = h('button', 'btn btn-secondary btn-sm', label, { type: 'button' });
-          b.addEventListener('click', async () => {
+          b.addEventListener('click', async (e) => {
+            e.stopPropagation();
             b.disabled = true;
             try {
               await api('/admin/v2/advisor-requests/' + encodeURIComponent(r.id), { method: 'PATCH', body: { status: to } });
@@ -344,7 +382,7 @@ function viewQueue(panel, params) {
         if (r.status !== 'resolved') w.appendChild(act(t('c_mark_resolved'), 'resolved'));
         return w;
       } },
-    ], items, { caption: t('c_tab_queue') }));
+    ], items, { caption: t('c_tab_queue'), onRow: (r) => openReceipt(r.customer_id, r.customer_name) }));
   };
   load(slot, fetcher, draw);
 }

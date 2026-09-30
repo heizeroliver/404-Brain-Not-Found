@@ -6,22 +6,21 @@ Deadline: **23:00 CEST** on Builderbase. Target: submitted by 22:45. Nobody push
 
 Kate Foresight is a working proof of concept for scalable personalization at KBC. One deterministic decision engine combines three sources: the customer's own calendar (holiday pay, renewals, a child turning 18, maturing savings), Belgium's calendar (tax and rule changes, illustrated with 2026 measures) and intent the customer states in plain language ("keep €8,000 for my renovation"). It ranks moments, protects customers in difficulty (care mode drops all offers), caps frequency and recommends a channel, including a person. Customers see one priority moment with why-now reasons they can correct, a savings allocation that recalculates when they set a goal, and can request an adviser; the operator sees that exact request in the control room, with drill-down charts, a rule studio with a non-mutating impact preview, and an audit log of what was shown, deferred or suppressed. FastAPI, NL/EN/FR, 10,000 synthetic customers measured at 1.3 s per daily pass, token-scoped API, Aikido-scanned.
 
-## (b) Video script (target 2:50, hard limit 3:00)
+## (b) Video script (target 2:52, hard limit 3:00)
 
-Setup: restart `./run.sh` right before recording. Browser 1440×900, NL, logged out, passwords at hand.
+Full click-by-click script, setup and fallbacks: [docs/DEMO_RUN.md](docs/DEMO_RUN.md). Record in **EN** (header switch). Restart `./run.sh` right before recording (state is in memory); pre-log-in three browser profiles: **lien**, **rita**, **admin**.
 
-| Time | On screen (exact clicks) | Voice-over (English) |
+| Time | On screen | Voice-over (short) |
 |---|---|---|
-| 0:00-0:12 | Login screen. | "KBC asked how a bank can respond at exactly the right moment for 2.3 million customers. Kate Foresight is one decision engine over three things: your money history, your calendar and what you tell us." |
-| 0:12-0:40 | Log in as **lien**, open **Praat met Kate**. Click the chip or type "Waar ging mijn geld de voorbije drie maanden?". | "Lien asks where her money went. Kate answers for an exact period, first of July to thirtieth of September, with categories that add up to the total, and income and pension saving kept apart." |
-| 0:40-1:00 | Ask "Wat komt er de komende 90 dagen?". | "What's coming? Contract dates, legal changes and estimates from her own history, each labelled for what it is." |
-| 1:00-1:30 | Ask "Hou €8.000 beschikbaar voor mijn verbouwing", show the editable amount, click **Bevestig**. | "Then she tells Kate something no data shows: eight thousand euros is for her renovation. Kate proposes, Lien confirms, and the engine recalculates: buffer, reserved goal, and five thousand seven hundred left. No money moves." |
-| 1:30-1:45 | Ask "Waarom raad je dit aan?", open **Bronnen en aannames**. Click **Overzicht**: the recommendation now says €5.700. | "Why? The evidence, her goal and our assumptions, in the open. The overview changed with it." |
-| 1:45-2:05 | Log out, **marc**, **Vraag een adviseur** on the company-car moment, confirm. | "High-stakes moments go to a person. Marc requests an adviser; the prototype creates a real request, and says no call is actually placed." |
-| 2:05-2:35 | Log out, **admin**. Overview metrics and charts, then **Adviseurswachtrij**: Marc's request, **Start behandeling**. | "The operator sees the same decisions across 203 synthetic customers, recommendations labelled as recommendations, and Marc's exact request in the queue." |
-| 2:35-2:52 | Stay on the control room. | "Rules plus arbitration ran for 10,000 synthetic customers in 1.3 seconds on one process; 2.3 million is an extrapolation, and production needs shared storage and event triggers. Every route is token-scoped and Aikido-scanned. Kate Foresight, by 404 Brain Not Found." |
+| 0:00-0:12 | Lien, `#/customer/overview`. | Problem and promise: one decision engine over your calendar, Belgium's calendar and what you tell it. |
+| 0:12-0:32 | **Timeline**, 90 days then **12 months**: reminder windows (idle cash, first home), deadline 31 Dec (pension top-up), renewal 1 Jul 2027, expected holiday pay 22 May 2027. | Known dates, reminder windows and estimates are labelled as what they are. |
+| 0:32-1:15 | **Talk to Kate**: type "Keep €8,000 available for my renovation" → **What changes if you confirm?** (savings €26,000; modeled buffer €12,300, assumption; reserved €0 → €8,000; remaining €13,700 → €5,700) → **Apply this plan** → "Why do you recommend this?". | The preview saves nothing; Lien applies; Why shows evidence, goal, assumptions. |
+| 1:15-1:40 | Rita: "We held a payment" → **Ask an adviser** → **Request contact** → AR id under **My requests**. | Protective situation, sales paused; prototype request, no real adviser contacted. |
+| 1:40-2:15 | Admin: **Advisor queue** → same AR id → **Decision receipt** (or **Moments** → search "rita" → Payment protection). | Recognised situation, shown recommendation, withheld suggestions (Idle cash, Term account maturity), reason "Sales suggestions paused while we help", deferred by weekly cap, channel Advisor. |
+| 2:15-2:40 | Optional: **Rule studio** → **Preview impact** (do not activate). | A rule is data; preview activates nothing. |
+| 2:40-2:55 | Control room overview. | 203 synthetic customers in the prototype; 10,000 benchmarked (rules + arbitration, 1.3 s, one process, excludes loading/storage); 2.3M is proposed architecture. Close: "Kate Foresight makes personalization something the customer can understand, correct and act on—and the bank can explain." |
 
-If long, cut the Marc step (keep the operator queue by pre-creating one request before recording). Voice: only show the microphone if it worked on the recording laptop in a test run; otherwise type.
+If long, cut the rule studio. Voice: live ElevenLabs is not verified (tested with mocks); type unless the microphone worked in a test run on the recording laptop. If voice fails, type the same sentence; the text answer stays.
 
 ## (c) Final submission checklist
 
@@ -32,7 +31,7 @@ If long, cut the Marc step (keep the operator queue by pre-creating one request 
 5. [ ] Both Aikido screenshots uploaded to Builderbase and committed as `screenshots/aikido-before.png` and `screenshots/aikido-after.png`; the README placeholder line replaced with the two images.
 6. [ ] README renders on GitHub: all screenshots load, links to `backend/README.md` and `SUBMISSION.md` work.
 7. [ ] No secrets in the repo: `git ls-files | grep -i env` shows only `backend/.env.example`; `git grep -nE "AIza|xi-api-key|sk_[a-z0-9]{10}|DEMO_PASSWORD=.+|JWT_SECRET=.+"` returns nothing; no `.mp3` or `decision_log.jsonl` tracked.
-8. [ ] Fresh clone plus `./run.sh` works from zero, and `cd backend && ../.venv/bin/pytest -q` shows 51 passed.
+8. [ ] Fresh clone plus `./run.sh` works from zero, and `cd backend && ../.venv/bin/pytest -q` passes (fully offline).
 9. [ ] All Builderbase fields filled: team name, KBC case, video link, description, repo link, Aikido screenshots.
 10. [ ] Submitted before 23:00 CEST (aim 22:45); screenshot the confirmation page; nobody pushes to `main` afterwards.
 

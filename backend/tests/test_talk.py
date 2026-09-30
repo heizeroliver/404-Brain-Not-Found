@@ -117,4 +117,6 @@ def test_admin_forbidden_and_validation(client, headers_for):
 def test_unsupported_text_clarifies(client, headers_for):
     body = _talk(client, headers_for("lien"), "tell me a joke").json()
     _common(body)
-    assert body["intent"] == "clarify" and len(body["suggestions"]) == 4
+    assert body["intent"] == "out_of_scope" and body["proposal"] is None
+    hi = _talk(client, headers_for("lien"), "hello there").json()
+    assert hi["intent"] == "clarify" and len(hi["suggestions"]) == 4

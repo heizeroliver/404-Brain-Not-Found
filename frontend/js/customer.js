@@ -7,7 +7,6 @@ registerStrings(strings);
 
 let renderSeq = 0;          // guards against late responses after navigation
 let openPanelRef = null;    // currently open panel (closed after mutations)
-let tlDays = 90;
 
 const lq = (path) => path + (path.includes("?") ? "&" : "?") + "lang=" + encodeURIComponent(state.lang || "nl");
 const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : "");
@@ -79,15 +78,11 @@ export function renderCustomer(root, section) {
 function allocationSection(a) {
   const sec = h("section", "card stack-3", null, [el("h2", "section-title", t("alloc_title"))]);
   if (!a) return sec;
-  const segs = [{ key: "buffer", label: t("alloc_buffer"), value: Math.min(a.buffer, a.savings), color: "#003665" }];
-  const reserved = a.reserved || [];
-  if (reserved.length && a.reserved_covered > 0) {
-    let left = a.reserved_covered;
-    reserved.forEach((r) => {
-      const v = Math.min(r.amount, left); left -= v;
-      segs.push({ key: "goal-" + r.goal_id, label: cap(t("gp_" + r.purpose)), value: v, color: "#00AEEF" });
-    });
-  }
+  // funded amounts come from the backend (engine/allocation.py) and always add up to savings
+  const segs = [{ key: "buffer", label: t("alloc_buffer"), value: a.buffer_covered ?? Math.min(a.buffer, a.savings), color: "#003665" }];
+  (a.reserved || []).forEach((r) => {
+    if (r.covered > 0) segs.push({ key: "goal-" + r.goal_id, label: cap(t("gp_" + r.purpose)), value: r.covered, color: "#00AEEF" });
+  });
   segs.push({ key: "remaining", label: t("alloc_remaining"), value: a.remaining, color: "#9FB7CC", pattern: "hatch" });
   sec.appendChild(allocationBar(segs, { label: t("alloc_total", fmtEur(a.savings)) }));
   if (a.shortfall > 0) {
@@ -286,48 +281,106 @@ function renderOverview(root) {
   });
 }
 
-// ------------------------------------------------------------------ timeline
-async function fetchTimeline(days) {
-  try { return await api(lq("/me/timeline2?days=" + days)); }
-  catch (err) {
-    if (/not found/i.test(err.message)) return api(lq("/me/timeline-v2?days=" + days));
-    throw err;
+// ------------------------------------------------------------------ timeline (money calendar)
+let tlFilter = "all";
+const TL_FILTERS = ["all", "for_you", "tax", "savings", "pension", "insurance", "loan", "home", "car", "income"];
+
+function tlLocale() { return { nl: "nl-BE", en: "en-GB", fr: "fr-BE" }[state.lang] || "nl-BE"; }
+function tlDate(iso) { return new Date(String(iso) + "T12:00:00"); }
+
+function tlDateBlock(it) {
+  const loc = tlLocale();
+  const d = tlDate(it.date);
+  const box = el("div", "cal-date");
+  box.setAttribute("aria-hidden", "true");
+  if (it.end && it.end !== it.date) {
+    const e = tlDate(it.end);
+    const m = new Intl.DateTimeFormat(loc, { month: "short" });
+    box.classList.add("cal-date-range");
+    box.appendChild(el("span", "cal-date-mon", m.format(d).replace(".", "")));
+    box.appendChild(el("span", "cal-date-range-to", "→ " + m.format(e).replace(".", "")));
+  } else {
+    box.appendChild(el("span", "cal-date-day", String(d.getDate())));
+    box.appendChild(el("span", "cal-date-mon", new Intl.DateTimeFormat(loc, { month: "short" }).format(d).replace(".", "")));
   }
+  return box;
+}
+
+function tlWhen(it) {
+  if (it.end && it.end !== it.date) return t("cal_window", fmtDate(it.date), fmtDate(it.end));
+  if (it.recurrence) return t("cal_from", fmtDate(it.date)) + " · " + t("cal_rec_" + it.recurrence);
+  return fmtDate(it.date);
+}
+
+function tlRow(it, catLabels, highlight) {
+  const li = el("li", "cal-row" + (highlight ? " cal-row-next" : ""));
+  li.appendChild(tlDateBlock(it));
+  const body = el("div", "cal-body");
+  const tags = el("div", "cal-tags");
+  tags.appendChild(el("span", "cal-tag", catLabels[it.category] || it.category));
+  if (it.source === "you") tags.appendChild(el("span", "cal-tag cal-tag-you", t("cal_src_you")));
+  else if (it.for_you) tags.appendChild(el("span", "cal-tag cal-tag-you", t("cal_for_you")));
+  if (it.basis) tags.appendChild(el("span", "cal-tag cal-tag-basis", t("cal_basis_" + it.basis)));
+  body.appendChild(tags);
+  body.appendChild(el("div", "cal-title", it.title));
+  body.appendChild(el("div", "cal-when muted", tlWhen(it)));
+  if (it.what) body.appendChild(el("p", "cal-what", it.what));
+  if (it.source === "you" && it.kind) body.appendChild(el("p", "cal-what", `${t("k_" + it.kind)} · ${t("cal_src_you_long")}`));
+  if (it.tip) {
+    const tip = el("p", "cal-tip");
+    tip.appendChild(el("strong", "cal-tip-label", t("cal_tip") + " "));
+    tip.appendChild(document.createTextNode(it.tip));
+    body.appendChild(tip);
+  }
+  if (it.source_hint) body.appendChild(el("div", "cal-src muted", t("cal_source", it.source_hint)));
+  li.appendChild(body);
+  return li;
 }
 
 function renderTimeline(root) {
-  load(root, () => fetchTimeline(tlDays), (d) => {
-    const wrap = h("div", "stack-6", null, [el("h1", "section-title", t("tl_title"))]);
-    const seg = el("div", "tabs");
-    seg.setAttribute("role", "group");
-    seg.setAttribute("aria-label", t("tl_horizon"));
-    [[90, "tl_90"], [365, "tl_365"]].forEach(([n, key]) => {
-      const b = btn(t(key), "chip", () => { tlDays = n; renderTimeline(root); });
-      b.setAttribute("aria-pressed", String(tlDays === n));
-      seg.appendChild(b);
-    });
-    wrap.appendChild(seg);
+  load(root, () => api(lq("/me/money-calendar")), (d) => {
+    const all = d.items || [];
+    const catLabels = {};
+    (d.categories || []).forEach((c) => { catLabels[c.key] = c.label; });
+    const count = (f) => (f === "all" ? all.length : f === "for_you" ? all.filter((i) => i.for_you).length
+      : all.filter((i) => i.category === f).length);
+    const wrap = h("div", "stack-6 cal", null, [
+      el("h1", "section-title", t("cal_title")),
+      el("p", "muted", t("cal_intro")),
+    ]);
 
-    const legend = h("section", "card stack-2", null, [el("h2", "label", t("tl_legend"))]);
-    legend.appendChild(el("p", "muted", `${t("tl_sources")}: ${["life_calendar", "world_rule", "protection"].map(srcLabel).join(" · ")}`));
-    const kinds = el("ul", "");
-    kinds.style.display = "flex"; kinds.style.flexWrap = "wrap"; kinds.style.gap = "12px"; kinds.style.listStyle = "none"; kinds.style.padding = "0";
-    ["deadline", "reminder_window", "expected_payment", "renewal", "effective_date"].forEach((k) => {
-      const li = h("li", "muted", null, [kindIcon(k), el("span", "", " " + t("k_" + k))]);
-      li.style.display = "inline-flex"; li.style.alignItems = "center"; li.style.gap = "4px";
-      kinds.appendChild(li);
-    });
-    legend.appendChild(kinds);
-    wrap.appendChild(legend);
+    // Next up: first item that concerns you.
+    const next = all.find((i) => i.for_you);
+    if (next) {
+      const nx = h("section", "card cal-next stack-2", null, [el("h2", "eyebrow", t("cal_next"))]);
+      const ul = el("ul", "cal-list");
+      ul.appendChild(tlRow(next, catLabels, true));
+      nx.appendChild(ul);
+      wrap.appendChild(nx);
+    }
 
-    const items = d.items || [];
+    const chips = el("div", "cal-chips");
+    chips.setAttribute("role", "group");
+    chips.setAttribute("aria-label", t("cal_filter"));
+    TL_FILTERS.forEach((f) => {
+      const n = count(f);
+      if (!n && f !== "all" && f !== "for_you") return;
+      const label = f === "all" ? t("cal_all") : f === "for_you" ? t("cal_for_you") : (catLabels[f] || f);
+      const b = el("button", "chip", null);
+      b.type = "button";
+      b.appendChild(el("span", "", label));
+      b.appendChild(el("span", "cal-chip-count", String(n)));
+      b.setAttribute("aria-pressed", String(tlFilter === f));
+      b.addEventListener("click", () => { tlFilter = f; renderTimeline(root); });
+      chips.appendChild(b);
+    });
+    wrap.appendChild(chips);
+
+    const items = all.filter((i) => tlFilter === "all" || (tlFilter === "for_you" ? i.for_you : i.category === tlFilter));
     if (!items.length) {
-      const e = h("section", "card empty", null, [el("p", "", t("tl_empty"))]);
-      if (d.next_after_horizon) e.appendChild(el("p", "muted", t("tl_next", fmtDate(d.next_after_horizon.date), d.next_after_horizon.title)));
-      wrap.appendChild(e);
+      wrap.appendChild(h("section", "card empty", null, [el("p", "", t("tl_empty"))]));
     } else {
-      const lang = { nl: "nl-BE", en: "en-GB", fr: "fr-BE" }[state.lang] || "nl-BE";
-      const monthFmt = new Intl.DateTimeFormat(lang, { month: "long", year: "numeric" });
+      const monthFmt = new Intl.DateTimeFormat(tlLocale(), { month: "long", year: "numeric" });
       const groups = new Map();
       items.forEach((it) => {
         const k = String(it.date).slice(0, 7);
@@ -335,31 +388,22 @@ function renderTimeline(root) {
         groups.get(k).push(it);
       });
       groups.forEach((list, k) => {
-        const sec = h("section", "card stack-3", null, [el("h2", "section-title", cap(monthFmt.format(new Date(k + "-01T12:00:00"))))]);
-        const ul = el("ul", "stack-3");
-        list.forEach((it) => {
-          const li = el("li", "");
-          li.style.display = "flex"; li.style.gap = "12px"; li.style.alignItems = "flex-start";
-          li.appendChild(kindIcon(it.kind));
-          const txt = h("div", "stack-1", null, [
-            el("div", "num", fmtDate(it.date) + (it.end && it.end !== it.date ? " – " + fmtDate(it.end) : "")),
-            el("div", "", it.title),
-            el("div", "muted", `${t("k_" + it.kind)} · ${srcLabel(it.source)}`),
-          ]);
-          li.appendChild(txt);
-          ul.appendChild(li);
-        });
+        const sec = el("section", "cal-month");
+        const hd = el("h2", "cal-month-head", cap(monthFmt.format(tlDate(k + "-01"))));
+        sec.appendChild(hd);
+        const ul = el("ul", "cal-list card");
+        list.forEach((it) => ul.appendChild(tlRow(it, catLabels, false)));
         sec.appendChild(ul);
         wrap.appendChild(sec);
       });
-      if (d.next_after_horizon) wrap.appendChild(el("p", "muted", t("tl_next", fmtDate(d.next_after_horizon.date), d.next_after_horizon.title)));
     }
+    if (d.disclaimer) wrap.appendChild(el("p", "muted cal-disclaimer", d.disclaimer));
     root.appendChild(wrap);
   });
 }
 
 // ------------------------------------------------------------------ plans
-function renderPlans(root, prefill) {
+function renderPlans(root, prefill, replaceId) {
   load(root, () => api(lq("/me/overview")), (d) => {
     const grid = el("div", "layout-2col");
     const main = el("div", "stack-6");
@@ -401,6 +445,8 @@ function renderPlans(root, prefill) {
           ok.disabled = true; no.disabled = true;
           try {
             await api("/me/goals", { method: "POST", body: { purpose: p.purpose, amount: p.amount, keep_accessible: p.keep_accessible } });
+            // editing: the original goal is removed only after its replacement was saved
+            if (replaceId) { try { await api("/me/goals/" + encodeURIComponent(replaceId), { method: "DELETE" }); } catch (_) { toast(t("save_fail"), "error"); } }
             closePanel();
             toast(t("goal_saved"), "info");
             renderPlans(root);
@@ -426,6 +472,7 @@ function renderPlans(root, prefill) {
         const row = el("div", "");
         row.style.display = "flex"; row.style.gap = "8px";
         const mutate = async (b, prefillText) => {
+          if (prefillText) { renderPlans(root, prefillText, g.id); return; }  // edit: keep the original until confirmed
           row.querySelectorAll("button").forEach((x) => { x.disabled = true; });
           try {
             await api("/me/goals/" + encodeURIComponent(g.id), { method: "DELETE" });

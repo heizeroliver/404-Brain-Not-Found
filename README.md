@@ -32,11 +32,19 @@ KBC's five questions: which signals help us understand what customers need; how 
 
 ## Kate Talk (AIR-inspired conversation)
 
-Tab **Praat met Kate** answers four supported question types from the customer's own data: where the money went (exact period, categories, income and pension saving kept separate), what is coming in the next 90 days (contract dates, legal dates and estimates labelled as such), "keep €8,000 for my renovation" (proposal with an editable amount, explicit confirm, allocation and recommendation update, no money moves) and why Kate recommends something (evidence, current goals, assumptions). Deterministic intent routing and templates, not open conversation; every number comes from the backend. Push-to-talk (ElevenLabs speech-to-text and text-to-speech) appears only when `ELEVENLABS_API_KEY` and voice ids are set; it was tested with mocks, not against the live service.
+Tab **Praat met Kate** answers four supported question types from the customer's own data: where the money went (exact period, categories, income and pension saving kept separate), what is coming in the next 90 days (contract dates, legal dates and estimates labelled as such), "keep €8,000 for my renovation" (proposal with an editable amount and a non-mutating "What changes if you confirm?" preview, explicit **Apply this plan**, allocation and recommendation update, no money moves) and why Kate recommends something (evidence, current goals, assumptions). Deterministic intent routing and templates, not open conversation; every number comes from the backend. Push-to-talk (ElevenLabs speech-to-text and text-to-speech) appears only when `ELEVENLABS_API_KEY` and voice ids are set; it was tested with mocks, not against the live service.
 
 | | |
 |---|---|
 | ![Spending](screenshots/talk-spending-1440.png) | ![Goal saved](screenshots/talk-goal-saved-1440.png) |
+
+## What's new (latest demo build)
+
+- **Kate Talk understands amounts in questions.** "Why is €5,700 available?" is answered as a why question, not turned into a goal; "Did I spend €100 on groceries?" gets an honest "I can't check a single payment, only category totals"; several ambiguous amounts lead to a clarifying question.
+- **"What changes if you confirm?"** Before a goal is saved, Kate shows current vs proposed plan (savings, modeled buffer as an assumption, reserved, remaining), the recommendation before and after, and **Apply this plan** / **Keep my current plan**. The preview (`POST /me/talk/goal/preview`) stores nothing. Oversized goals show the shortfall separately; funded chart segments always add up to the savings.
+- **Voice robustness.** The transcript is shown for review before sending, spoken answers do not overlap, and a voice failure keeps the text answer. Live ElevenLabs is not verified (tested with mocks, no key in the test environment).
+- **Decision receipt in the control room.** Per customer: situation recognised, recommendation shown, suggestions withheld with the recorded reason (e.g. "Sales suggestions paused while we help"), items deferred by the frequency cap, channel, and advisor request status with its AR id.
+- **Scoped answers.** Kate answers only about KBC products and your own data.
 
 ## Screenshots (current UI)
 
@@ -63,16 +71,14 @@ cd 404-Brain-Not-Found
 
 `run.sh` creates `.venv`, installs `backend/requirements.lock`, writes `backend/.env` with a generated JWT secret and demo password (printed once, stored as `DEMO_PASSWORD`), then starts the API on :8000 and the app on :5173. Open **http://localhost:5173**, click a persona card, enter the demo password, click **Open de app**.
 
-**Demo path (3 minutes):**
-0. Tab **Praat met Kate**: ask "Waar ging mijn geld de voorbije drie maanden?", "Wat komt er de komende 90 dagen?", then "Hou €8.000 beschikbaar voor mijn verbouwing" and **Bevestig**.
-1. Log in as **lien** (NL). Overview shows "Spaargeld dat niets doet" with €13.700 above a modeled six-month buffer. Click **Waarom?**: reasons, dates, source, technical details.
-2. Click **Plan je spaargeld** (My plans). Type `Ik wil €8.000 beschikbaar houden voor mijn verbouwing`, click **Vraag Kate**, then **Bevestig**. The chart shows €12.300 buffer, €8.000 renovation, €5.700 remaining; the overview recommendation updates.
-3. Log out, log in as **marc**. On the company-car moment click **Vraag een adviseur**, confirm. A prototype request id (AR-…) appears.
-4. Log out, log in as **admin**. Control room overview: metrics and charts; click a bar to drill into Moments. Open **Adviseurswachtrij**: Marc's request; click **Start behandeling**, then **Markeer afgehandeld**.
-5. **Regelstudio**: the illustrative template, **Preview impact** (nothing is activated), optionally **Activate**.
-6. Optional: **rita** shows protective treatment (held payment, care mode, no offers).
+**Demo path (3 minutes, EN):** full recording script with click paths and fallbacks in [docs/DEMO_RUN.md](docs/DEMO_RUN.md). Restart `./run.sh` first (state is in memory), click **EN** in the header.
+1. **lien** → **Timeline** (`#/customer/timeline`), 12 months: reminder windows, a legal deadline, a contract renewal and an estimated holiday pay, each labelled.
+2. **Talk to Kate** (`#/customer/talk`): type `Keep €8,000 available for my renovation` → **What changes if you confirm?** (remaining €13,700 → €5,700, buffer €12,300 is a modeled assumption; the preview saves nothing) → **Apply this plan** → ask `Why do you recommend this?`.
+3. **rita** → "We held a payment" → **Ask an adviser** → **Request contact**: a prototype request id (AR-…); no real adviser is contacted.
+4. **admin** → **Advisor queue**: the same AR id → **Decision receipt** (also via **Moments** → search `rita` → Payment protection): what was recognised, shown, withheld and why, deferred, and the channel.
+5. Optional: **Rule studio** → **Preview impact** (nothing is activated).
 
-**Mijn gegevens / My data** toggles consents (insurance data, other banks, marketing) and the feed changes. Tests: `cd backend && ../.venv/bin/pytest -q` (67 tests, fully offline). Manual setup, routes, Gemini and ElevenLabs configuration: [backend/README.md](backend/README.md).
+**Mijn gegevens / My data** toggles consents (insurance data, other banks, marketing) and the feed changes. Tests: `cd backend && ../.venv/bin/pytest -q` (fully offline). Manual setup, routes, Gemini and ElevenLabs configuration: [backend/README.md](backend/README.md).
 
 ## Architecture
 
