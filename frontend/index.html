@@ -1,0 +1,480 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kate Foresight</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root { --kbc: #00aeef; }
+  body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .kbc-text { color: var(--kbc); }
+  .kbc-bg { background: var(--kbc); }
+  .kbc-border { border-color: var(--kbc); }
+  .phone { width: 390px; min-height: 780px; border-radius: 44px; border: 10px solid #111827; background: #f8fafc; overflow: hidden; box-shadow: 0 30px 60px rgba(15, 23, 42, .25); }
+  .phone-notch { height: 28px; background: #111827; }
+  .chip { display: inline-flex; align-items: center; gap: .25rem; border-radius: 9999px; padding: .1rem .55rem; font-size: .7rem; font-weight: 600; }
+  .fade { animation: fade .25s ease-out; }
+  @keyframes fade { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: none; } }
+  table td, table th { padding: .3rem .5rem; }
+</style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen">
+<script>
+  // Configure where the API runs. Override before load with window.API_BASE_URL if needed.
+  const API_BASE = window.API_BASE_URL || "http://localhost:8000";
+</script>
+
+<header class="bg-white border-b border-slate-200">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full kbc-bg text-white flex items-center justify-center font-bold">K</div>
+      <div>
+        <div class="font-semibold leading-tight">Kate Foresight</div>
+        <div class="text-xs text-slate-500">Two calendars: yours and the world's</div>
+      </div>
+    </div>
+    <div class="flex items-center gap-3 text-sm">
+      <span id="who" class="text-slate-500"></span>
+      <button id="logout" class="hidden px-3 py-1 rounded-md border border-slate-300 hover:bg-slate-50">Log out</button>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-6">
+
+  <!-- LOGIN -->
+  <section id="view-login" class="fade">
+    <h1 class="text-2xl font-semibold mb-1">Who is opening the app?</h1>
+    <p class="text-slate-500 mb-6">Synthetic personas. Same demo password for everyone (see <code>backend/.env</code>).</p>
+    <div class="grid md:grid-cols-4 gap-4 mb-6" id="personas"></div>
+    <form id="login-form" class="flex flex-wrap items-end gap-3 bg-white p-4 rounded-xl border border-slate-200 max-w-2xl">
+      <label class="text-sm">Persona
+        <input id="login-id" class="block mt-1 border border-slate-300 rounded-md px-3 py-2 w-40" placeholder="lien" autocomplete="username">
+      </label>
+      <label class="text-sm">Demo password
+        <input id="login-pw" type="password" class="block mt-1 border border-slate-300 rounded-md px-3 py-2 w-52" autocomplete="current-password">
+      </label>
+      <button class="kbc-bg text-white px-4 py-2 rounded-md font-medium hover:opacity-90">Open</button>
+      <span id="login-error" class="text-sm text-red-600"></span>
+    </form>
+  </section>
+
+  <!-- CUSTOMER -->
+  <section id="view-customer" class="hidden">
+    <div class="flex flex-col lg:flex-row gap-8 items-start">
+      <div class="phone mx-auto">
+        <div class="phone-notch"></div>
+        <div class="px-4 pt-3 pb-2 flex items-center justify-between">
+          <div>
+            <div class="text-xs text-slate-500" id="greeting-sub"></div>
+            <div class="font-semibold text-lg" id="greeting"></div>
+          </div>
+          <span class="chip bg-slate-800 text-white" title="AI Act Art. 50 transparency">AI · Kate</span>
+        </div>
+        <nav class="px-4 flex gap-2 text-sm border-b border-slate-200">
+          <button data-tab="feed" class="tab py-2 border-b-2 kbc-border font-medium">Home</button>
+          <button data-tab="timeline" class="tab py-2 border-b-2 border-transparent text-slate-500">Next 12 months</button>
+          <button data-tab="consents" class="tab py-2 border-b-2 border-transparent text-slate-500">My data</button>
+        </nav>
+        <div id="phone-body" class="p-4 space-y-3 overflow-y-auto" style="max-height: 640px;"></div>
+      </div>
+      <aside class="flex-1 min-w-0">
+        <div id="why-drawer" class="hidden bg-white rounded-xl border border-slate-200 p-5 fade">
+          <div class="flex items-start justify-between gap-3">
+            <h2 class="font-semibold text-lg">Why am I seeing this?</h2>
+            <button id="why-close" class="text-slate-400 hover:text-slate-700">✕</button>
+          </div>
+          <p id="why-text" class="mt-2 text-slate-700"></p>
+          <h3 class="mt-4 text-sm font-semibold text-slate-500 uppercase tracking-wide">Signals used</h3>
+          <ul id="why-evidence" class="mt-1 list-disc pl-5 space-y-1 text-sm"></ul>
+          <dl id="why-meta" class="mt-4 grid grid-cols-2 gap-y-1 text-sm"></dl>
+          <p class="mt-4 text-xs text-slate-500">You can correct this: "Not relevant" lowers this moment's weight, "Never" switches it off for you. Every decision is logged.</p>
+        </div>
+        <div id="side-hint" class="text-slate-500 text-sm bg-white rounded-xl border border-dashed border-slate-300 p-5">
+          Tap <strong>Why?</strong> on a card to see the exact signals, the rule, the confidence and the legal basis.
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ADMIN -->
+  <section id="view-admin" class="hidden fade">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h1 class="text-2xl font-semibold">Control room</h1>
+        <p class="text-slate-500 text-sm" id="admin-sub"></p>
+      </div>
+      <button id="admin-refresh" class="px-3 py-1.5 rounded-md border border-slate-300 bg-white hover:bg-slate-50 text-sm">Refresh</button>
+    </div>
+    <div id="admin-tiles" class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-6"></div>
+    <div class="grid lg:grid-cols-3 gap-4 mb-6">
+      <div class="bg-white rounded-xl border border-slate-200 p-4"><h2 class="font-semibold mb-2">Moments by type</h2><table class="w-full text-sm" id="admin-by-type"></table></div>
+      <div class="bg-white rounded-xl border border-slate-200 p-4"><h2 class="font-semibold mb-2">Channel mix</h2><table class="w-full text-sm" id="admin-by-channel"></table>
+        <h2 class="font-semibold mt-4 mb-2">Source</h2><table class="w-full text-sm" id="admin-by-source"></table>
+        <h2 class="font-semibold mt-4 mb-2">Opt-outs and consents</h2><table class="w-full text-sm" id="admin-optouts"></table></div>
+      <div class="bg-white rounded-xl border border-slate-200 p-4"><h2 class="font-semibold mb-2">World rules on the twins</h2><table class="w-full text-sm" id="admin-world"></table>
+        <details class="mt-4">
+          <summary class="cursor-pointer text-sm font-medium kbc-text">Drop in a new rule (JSON, validated server-side)</summary>
+          <textarea id="rule-json" class="mt-2 w-full h-56 text-xs font-mono border border-slate-300 rounded-md p-2"></textarea>
+          <div class="mt-2 flex items-center gap-3">
+            <button id="rule-submit" class="kbc-bg text-white px-3 py-1.5 rounded-md text-sm">Run against all customers</button>
+            <span id="rule-result" class="text-sm"></span>
+          </div>
+        </details>
+      </div>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <h2 class="font-semibold mb-2">Decision log (append-only, last 30)</h2>
+      <div class="overflow-x-auto"><table class="w-full text-xs" id="admin-log"></table></div>
+    </div>
+  </section>
+</main>
+
+<script>
+(() => {
+  "use strict";
+  const state = { token: null, role: null, profile: null, tab: "feed", feed: null, timeline: null };
+
+  const PERSONAS = [
+    { id: "lien", name: "Lien", sub: "29 · Leuven · NL", blurb: "Renting 4 years, €26k saved, holiday pay in May, Bolero ETFs." },
+    { id: "marc", name: "Marc", sub: "47 · Namur · FR (CBC)", blurb: "Diesel company car, home insurance +8% in 6 weeks, Chloé turns 18." },
+    { id: "rita", name: "Rita", sub: "71 · Kortrijk · NL · not digital", blurb: "Pension, €48k on savings, home policy renewing. Advisor calls her." },
+    { id: "admin", name: "Control room", sub: "KBC · admin", blurb: "Moments across 203 customers, channel mix, care mode, decision log." },
+  ];
+  const CHANNEL_LABEL = { in_app_card: "In-app card", push: "Push", voice: "Kate voice", advisor: "Advisor call", letter: "Letter" };
+  const SOURCE_LABEL = { life_calendar: "Your calendar", world_rule: "The world changed", protection: "Protection" };
+  const STAKES_STYLE = { low: "bg-slate-100 text-slate-600", medium: "bg-sky-100 text-sky-800", high: "bg-amber-100 text-amber-800" };
+
+  const $ = (id) => document.getElementById(id);
+  function el(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+  function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+  function fmtEur(n) { return "€" + Math.round(Number(n)).toLocaleString("en-BE"); }
+
+  async function api(path, options = {}) {
+    const headers = { "Content-Type": "application/json", ...(options.headers || {}) };
+    if (state.token) headers["Authorization"] = "Bearer " + state.token;
+    const res = await fetch(API_BASE + path, { ...options, headers });
+    if (res.status === 401 && state.token) { logout(); throw new Error("Session expired"); }
+    if (!res.ok) {
+      let detail = res.statusText;
+      try { const body = await res.json(); detail = typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail); } catch (_) {}
+      throw new Error(detail);
+    }
+    return res;
+  }
+
+  // ---------------------------------------------------------------- login
+  function renderPersonas() {
+    const box = $("personas");
+    clear(box);
+    PERSONAS.forEach((p) => {
+      const card = el("button", "text-left bg-white rounded-xl border border-slate-200 p-4 hover:border-sky-400 hover:shadow-sm transition");
+      card.type = "button";
+      card.appendChild(el("div", "font-semibold text-lg", p.name));
+      card.appendChild(el("div", "text-xs kbc-text font-medium", p.sub));
+      card.appendChild(el("p", "text-sm text-slate-500 mt-2", p.blurb));
+      card.addEventListener("click", () => { $("login-id").value = p.id; $("login-pw").focus(); });
+      box.appendChild(card);
+    });
+  }
+
+  $("login-form").addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+    $("login-error").textContent = "";
+    try {
+      const res = await api("/login", { method: "POST", body: JSON.stringify({ customer_id: $("login-id").value.trim(), password: $("login-pw").value }) });
+      const body = await res.json();
+      state.token = body.access_token; state.role = body.role; state.profile = body.profile;
+      $("login-pw").value = "";
+      show(state.role === "admin" ? "admin" : "customer");
+    } catch (err) {
+      $("login-error").textContent = err.message === "Invalid credentials" ? "Invalid credentials." : "Login failed: " + err.message;
+    }
+  });
+
+  function logout() {
+    state.token = null; state.role = null; state.profile = null; state.feed = null; state.timeline = null;
+    show("login");
+  }
+  $("logout").addEventListener("click", logout);
+
+  function show(view) {
+    ["login", "customer", "admin"].forEach((v) => $("view-" + v).classList.toggle("hidden", v !== view));
+    $("logout").classList.toggle("hidden", view === "login");
+    $("who").textContent = view === "login" ? "" : (state.profile && state.profile.name) || "";
+    if (view === "customer") { state.tab = "feed"; setTab("feed"); }
+    if (view === "admin") loadAdmin();
+  }
+
+  // ------------------------------------------------------------- customer
+  document.querySelectorAll(".tab").forEach((btn) => btn.addEventListener("click", () => setTab(btn.dataset.tab)));
+  function setTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll(".tab").forEach((b) => {
+      const active = b.dataset.tab === tab;
+      b.classList.toggle("kbc-border", active); b.classList.toggle("font-medium", active);
+      b.classList.toggle("border-transparent", !active); b.classList.toggle("text-slate-500", !active);
+    });
+    $("greeting").textContent = state.profile ? greet(state.profile) : "";
+    $("greeting-sub").textContent = state.profile ? `${state.profile.region} · ${state.profile.language.toUpperCase()} · digital comfort ${state.profile.digital_comfort}/5` : "";
+    hideWhy();
+    if (tab === "feed") loadFeed();
+    if (tab === "timeline") loadTimeline();
+    if (tab === "consents") loadConsents();
+  }
+  function greet(p) {
+    const name = p.first_name || p.name;
+    return p.language === "fr" ? `Bonjour ${name}` : `Dag ${name}`;
+  }
+  function loading(text) { const body = $("phone-body"); clear(body); body.appendChild(el("p", "text-sm text-slate-400 py-6 text-center", text || "Loading…")); }
+  function errorBox(err) { const body = $("phone-body"); clear(body); body.appendChild(el("p", "text-sm text-red-600", "Could not load: " + err.message)); }
+
+  async function loadFeed() {
+    loading();
+    try {
+      const data = await (await api("/me/moments")).json();
+      state.feed = data;
+      renderFeed(data);
+    } catch (err) { errorBox(err); }
+  }
+
+  function renderFeed(data) {
+    const body = $("phone-body");
+    clear(body);
+    if (data.care_mode) {
+      const banner = el("div", "rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900");
+      banner.appendChild(el("div", "font-semibold", "Care mode is on"));
+      banner.appendChild(el("div", "", "No offers while your income is disrupted. Only help, and a person when you want one."));
+      body.appendChild(banner);
+    }
+    const head = el("div", "flex items-center justify-between text-xs text-slate-500");
+    head.appendChild(el("span", "", `${data.moments.length} moment${data.moments.length === 1 ? "" : "s"} · ${data.today}`));
+    head.appendChild(el("span", "", `narration: ${data.narration}`));
+    body.appendChild(head);
+    if (!data.moments.length) body.appendChild(el("p", "text-sm text-slate-500 py-8 text-center", "Nothing to flag today. Kate stays quiet."));
+    data.moments.forEach((m) => body.appendChild(momentCard(m)));
+  }
+
+  function chip(text, cls) { return el("span", "chip " + cls, text); }
+
+  function momentCard(m) {
+    const card = el("article", "bg-white rounded-2xl border border-slate-200 p-4 shadow-sm fade");
+    const top = el("div", "flex flex-wrap gap-1.5 mb-2");
+    top.appendChild(chip(SOURCE_LABEL[m.source] || m.source, m.source === "protection" ? "bg-amber-100 text-amber-800" : m.source === "world_rule" ? "bg-violet-100 text-violet-800" : "bg-sky-100 text-sky-800"));
+    top.appendChild(chip(`${Math.round(m.confidence * 100)}% sure`, "bg-emerald-50 text-emerald-700"));
+    top.appendChild(chip(CHANNEL_LABEL[m.channel] || m.channel, "bg-slate-100 text-slate-700"));
+    top.appendChild(chip(m.stakes + " stakes", STAKES_STYLE[m.stakes] || ""));
+    if (m.delivery === "queued") top.appendChild(chip("later this week (1/week cap)", "bg-slate-50 text-slate-500 border border-slate-200"));
+    if (m.human_review) top.appendChild(chip("human review", "bg-amber-50 text-amber-700"));
+    card.appendChild(top);
+    card.appendChild(el("p", "text-[15px] leading-snug", m.message));
+
+    const actions = el("div", "mt-3 flex flex-wrap items-center gap-2");
+    const cta = el("button", "kbc-bg text-white text-sm px-3 py-1.5 rounded-lg font-medium hover:opacity-90", m.cta_label);
+    cta.addEventListener("click", () => toast(card, m.channel === "advisor"
+      ? "An advisor will call you. Nothing is done without your explicit approval."
+      : "Kate prepares it. Nothing is done without your explicit approval."));
+    actions.appendChild(cta);
+    const why = el("button", "text-sm px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50", "Why?");
+    why.addEventListener("click", () => showWhy(m));
+    actions.appendChild(why);
+    const voice = el("button", "text-sm px-3 py-1.5 rounded-lg border border-slate-300 hover:bg-slate-50", "▶ Kate");
+    voice.title = "Play as a Kate voice note (ElevenLabs)";
+    voice.addEventListener("click", () => playVoice(m, card, voice));
+    actions.appendChild(voice);
+    card.appendChild(actions);
+
+    const fb = el("div", "mt-2 flex gap-3 text-xs text-slate-500");
+    [["not_now", "Not now"], ["not_relevant", "Not relevant"], ["never", "Never"], ["helpful", "Helpful"]].forEach(([action, label]) => {
+      const b = el("button", "hover:text-slate-900 underline-offset-2 hover:underline", label);
+      b.addEventListener("click", () => sendFeedback(m.type, action));
+      fb.appendChild(b);
+    });
+    card.appendChild(fb);
+    return card;
+  }
+
+  function toast(card, text) {
+    const note = el("div", "mt-2 text-xs rounded-lg bg-sky-50 text-sky-800 px-3 py-2 fade", text);
+    card.appendChild(note);
+    setTimeout(() => note.remove(), 3500);
+  }
+
+  async function sendFeedback(type, action) {
+    try {
+      await api("/me/feedback", { method: "POST", body: JSON.stringify({ moment_type: type, action }) });
+      await loadFeed();
+    } catch (err) { alert("Feedback failed: " + err.message); }
+  }
+
+  async function playVoice(m, card, button) {
+    button.disabled = true;
+    try {
+      const res = await fetch(API_BASE + "/me/voice/" + encodeURIComponent(m.type), { headers: { Authorization: "Bearer " + state.token } });
+      if (!res.ok) { toast(card, res.status === 404 ? "Voice not configured (set ELEVENLABS_API_KEY). Kate would say: \"Ik ben Kate, de digitale assistent van KBC…\"" : "Voice unavailable (" + res.status + ")"); return; }
+      const blob = await res.blob();
+      const audio = new Audio(URL.createObjectURL(blob));
+      audio.play();
+    } catch (err) { toast(card, "Voice failed: " + err.message); }
+    finally { button.disabled = false; }
+  }
+
+  function showWhy(m) {
+    $("side-hint").classList.add("hidden");
+    const drawer = $("why-drawer");
+    drawer.classList.remove("hidden");
+    $("why-text").textContent = m.why;
+    const ul = $("why-evidence"); clear(ul);
+    m.evidence.forEach((e) => ul.appendChild(el("li", "", e)));
+    const dl = $("why-meta"); clear(dl);
+    [["Rule", m.type], ["Source", SOURCE_LABEL[m.source] || m.source], ["Confidence", Math.round(m.confidence * 100) + "%"],
+     ["Stakes", m.stakes], ["Window", `${m.window[0]} → ${m.window[1]}`], ["Channel", CHANNEL_LABEL[m.channel] || m.channel],
+     ["Legal basis", m.legal_basis], ["Human review", m.human_review ? "yes" : "no"], ["Score", m.score],
+     ["Actions", m.actions.join(", ")]].forEach(([k, v]) => {
+      dl.appendChild(el("dt", "text-slate-500", k)); dl.appendChild(el("dd", "font-medium break-words", v));
+    });
+  }
+  function hideWhy() { $("why-drawer").classList.add("hidden"); $("side-hint").classList.remove("hidden"); }
+  $("why-close").addEventListener("click", hideWhy);
+
+  async function loadTimeline() {
+    loading();
+    try {
+      const data = await (await api("/me/timeline")).json();
+      const body = $("phone-body"); clear(body);
+      body.appendChild(el("div", "text-xs text-slate-500", `From ${data.today}: ${data.entries.length} upcoming moments`));
+      let lastMonth = "";
+      data.entries.forEach((e) => {
+        const month = e.start.slice(0, 7);
+        if (month !== lastMonth) { body.appendChild(el("div", "text-xs font-semibold uppercase tracking-wide text-slate-400 pt-2", monthLabel(month))); lastMonth = month; }
+        const row = el("div", "bg-white rounded-xl border border-slate-200 p-3 fade");
+        const head = el("div", "flex items-center justify-between gap-2");
+        head.appendChild(el("span", "text-xs font-medium kbc-text", e.start));
+        const chips = el("span", "flex gap-1");
+        chips.appendChild(chip(SOURCE_LABEL[e.source] || e.source, e.source === "world_rule" ? "bg-violet-100 text-violet-800" : e.source === "protection" ? "bg-amber-100 text-amber-800" : "bg-sky-100 text-sky-800"));
+        chips.appendChild(chip(CHANNEL_LABEL[e.channel] || e.channel, "bg-slate-100 text-slate-700"));
+        head.appendChild(chips);
+        row.appendChild(head);
+        row.appendChild(el("p", "text-sm mt-1", e.title));
+        const why = el("button", "text-xs text-slate-500 mt-1 hover:underline", "Why?");
+        why.addEventListener("click", () => showWhy({ ...e, why: e.title, confidence: 1, window: [e.start, e.end], legal_basis: "see rule", human_review: false, score: "-", actions: [] }));
+        row.appendChild(why);
+        body.appendChild(row);
+      });
+    } catch (err) { errorBox(err); }
+  }
+  function monthLabel(ym) {
+    const [y, m] = ym.split("-");
+    return new Date(Number(y), Number(m) - 1, 1).toLocaleString("en-GB", { month: "long", year: "numeric" });
+  }
+
+  async function loadConsents() {
+    loading();
+    try {
+      const consents = await (await api("/me/consents")).json();
+      const body = $("phone-body"); clear(body);
+      body.appendChild(el("p", "text-sm text-slate-600", "What Kate may use to spot moments. Changes apply immediately and are logged."));
+      const rows = [
+        ["use_insurance_data", "Use my insurance data", "Renewal dates, premiums, EPC in the mortgage file. Off = no insurance moments."],
+        ["use_other_banks", "Use my other banks' accounts", "Multibanking balances (none in this demo dataset)."],
+        ["marketing", "Suggestions about products", "Off = only information and protection, no offers (GDPR Art. 21)."],
+      ];
+      rows.forEach(([key, label, help]) => {
+        const row = el("label", "flex items-start gap-3 bg-white rounded-xl border border-slate-200 p-3 cursor-pointer");
+        const input = document.createElement("input");
+        input.type = "checkbox"; input.checked = Boolean(consents[key]); input.className = "mt-1 accent-sky-500";
+        input.addEventListener("change", async () => {
+          consents[key] = input.checked;
+          try { await api("/me/consents", { method: "PUT", body: JSON.stringify(consents) }); }
+          catch (err) { alert("Could not save: " + err.message); input.checked = !input.checked; consents[key] = input.checked; }
+        });
+        row.appendChild(input);
+        const text = el("div", "");
+        text.appendChild(el("div", "text-sm font-medium", label));
+        text.appendChild(el("div", "text-xs text-slate-500", help));
+        row.appendChild(text);
+        body.appendChild(row);
+      });
+      const note = el("p", "text-xs text-slate-500 mt-2", "Your feedback on cards (Not now / Not relevant / Never) is also stored and changes what you see.");
+      body.appendChild(note);
+    } catch (err) { errorBox(err); }
+  }
+
+  // ---------------------------------------------------------------- admin
+  const EXAMPLE_RULE = {
+    id: "savings_exemption_2027",
+    title: { en: "Savings-account interest exemption replaced by a €6,000 investment-income exemption" },
+    summary: { en: "From 1 January 2027 the savings-account exemption is replaced by a €6,000 investment-income exemption. Your savings of €{savings_balance} are affected.",
+               nl: "Vanaf 1 januari 2027 vervangt een vrijstelling van €6.000 op beleggingsinkomsten de spaarvrijstelling. Je spaargeld van €{savings_balance} valt eronder.",
+               fr: "Dès le 1er janvier 2027, une exonération de €6.000 sur les revenus d'investissement remplace l'exonération de l'épargne. Votre épargne de €{savings_balance} est concernée." },
+    cta: { en: "Explain it to me", nl: "Leg het me uit", fr: "Expliquez-moi" },
+    effective_date: "2027-01-01",
+    level: "federal",
+    conditions: [{ field: "savings_balance", op: "gt", value: 20000 }],
+    impact: { kind: "none", direction: "neutral" },
+    evidence: ["savings balance €{savings_balance} above €20,000", "budget agreement (illustrative headline for the demo)"],
+    actions: ["explain_change", "talk_to_advisor"],
+    stakes: "medium"
+  };
+
+  $("admin-refresh").addEventListener("click", loadAdmin);
+  $("rule-submit").addEventListener("click", async () => {
+    const out = $("rule-result"); out.textContent = "Running…";
+    try {
+      const parsed = JSON.parse($("rule-json").value);
+      const res = await (await api("/admin/rules", { method: "POST", body: JSON.stringify(parsed) })).json();
+      out.textContent = `Affected ${res.affected_customers} of ${res.customers_total} customers (impact ${fmtEur(res.total_impact)}). Sample: ${res.sample_customer_ids.join(", ")}`;
+      loadAdmin();
+    } catch (err) { out.textContent = "Rejected: " + err.message; }
+  });
+
+  async function loadAdmin() {
+    if (!$("rule-json").value) $("rule-json").value = JSON.stringify(EXAMPLE_RULE, null, 2);
+    try {
+      const d = await (await api("/admin/overview")).json();
+      $("admin-sub").textContent = `${d.today} · ${d.customers_total} customers · narration: ${d.narration}`;
+      const tiles = $("admin-tiles"); clear(tiles);
+      [["Customers", d.customers_total], ["With a moment today", d.customers_with_moments], ["Moments", d.moments_total],
+       ["Human handoffs", d.human_handoffs], ["Care mode", d.care_mode_count], ["Pushed now", (d.moments_by_delivery || {}).now || 0]]
+        .forEach(([k, v]) => {
+          const t = el("div", "bg-white rounded-xl border border-slate-200 p-3");
+          t.appendChild(el("div", "text-2xl font-semibold kbc-text", v)); t.appendChild(el("div", "text-xs text-slate-500", k)); tiles.appendChild(t);
+        });
+      fillTable($("admin-by-type"), Object.entries(d.moments_by_type));
+      fillTable($("admin-by-channel"), Object.entries(d.moments_by_channel).map(([k, v]) => [CHANNEL_LABEL[k] || k, v]));
+      fillTable($("admin-by-source"), Object.entries(d.moments_by_source).map(([k, v]) => [SOURCE_LABEL[k] || k, v]));
+      fillTable($("admin-optouts"), [["'Never' feedback", d.opt_outs.never_feedback], ["Marketing off", d.opt_outs.marketing_off],
+        ["Insurance data off", d.opt_outs.insurance_data_off], ["Other banks on", d.opt_outs.other_banks_on]]);
+      const world = $("admin-world"); clear(world);
+      const th = el("tr", "text-left text-slate-500"); ["Rule", "Since", "Affected", "€ impact"].forEach((h) => th.appendChild(el("th", "", h))); world.appendChild(th);
+      d.world_rules.forEach((r) => {
+        const tr = el("tr", "border-t border-slate-100");
+        tr.appendChild(el("td", "", r.title)); tr.appendChild(el("td", "text-slate-500", r.effective_date));
+        tr.appendChild(el("td", "font-medium", r.affected)); tr.appendChild(el("td", "", fmtEur(r.total_impact)));
+        world.appendChild(tr);
+      });
+      const log = $("admin-log"); clear(log);
+      const lh = el("tr", "text-left text-slate-500"); ["time", "customer", "moment", "decision", "reason", "score", "channel", "delivery"].forEach((h) => lh.appendChild(el("th", "", h))); log.appendChild(lh);
+      d.decision_log_tail.slice().reverse().forEach((e) => {
+        const tr = el("tr", "border-t border-slate-100");
+        [e.ts, e.customer_id, e.moment_type, e.decision, e.reason, e.score, e.channel, e.delivery].forEach((v) => tr.appendChild(el("td", "whitespace-nowrap", v === null || v === undefined ? "" : v)));
+        log.appendChild(tr);
+      });
+    } catch (err) { $("admin-sub").textContent = "Could not load overview: " + err.message; }
+  }
+  function fillTable(table, rows) {
+    clear(table);
+    rows.forEach(([k, v]) => { const tr = el("tr", "border-t border-slate-100"); tr.appendChild(el("td", "", k)); tr.appendChild(el("td", "text-right font-medium", v)); table.appendChild(tr); });
+  }
+
+  renderPersonas();
+})();
+</script>
+</body>
+</html>
