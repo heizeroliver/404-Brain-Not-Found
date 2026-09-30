@@ -2,8 +2,8 @@
 
 Generated with ui-ux-pro-max (`banking personalization dashboard`, pattern Trust & Authority, style Minimal/Swiss). Adjusted for KBC:
 
-- **Colors (semantic tokens in `frontend/css/app.css`):** `--navy #003665` (primary text on light, primary buttons, 12.2:1 on white), `--blue #00AEEF` (accent only: bars, focus ring, active indicators; 2.5:1 on white so never for text), `--blue-text #00709C` (links and small accent text, 5.5:1), `--ink #0F1B2D`, `--muted #475569`, `--line #E3E8EF`, `--canvas #F4F7FA`, `--surface #FFFFFF`, `--warn-ink #8A4B00` on `--warn-bg #FFF8EC` (care, attention), `--ok #0F7B4A`, `--danger #B42318`. No gold accent, no gradients, no purple.
-- **Chart palette:** buffer `#003665`, reserved goal `#00AEEF`, remaining `#9FB7CC` with hatch pattern; categories use navy/blue/slate steps plus direct labels (never color alone).
+- **Colors (semantic tokens in `frontend/css/app.css`):** `--navy #0B325E` (sampled from the KBC logo; primary text on light, primary buttons), `--blue #00ACEF` (sampled from the KBC logo; (accent only: bars, focus ring, active indicators; 2.5:1 on white so never for text), `--blue-text #00709C` (links and small accent text, 5.5:1), `--ink #0F1B2D`, `--muted #475569`, `--line #E3E8EF`, `--canvas #F4F7FA`, `--surface #FFFFFF`, `--warn-ink #8A4B00` on `--warn-bg #FFF8EC` (care, attention), `--ok #0F7B4A`, `--danger #B42318`. No gold accent, no gradients, no purple.
+- **Chart palette:** buffer `#0B325E`, reserved goal `#00ACEF`, remaining `#9FB7CC` with hatch pattern; categories use navy/blue/slate steps plus direct labels (never color alone).
 - **Typography:** system stack (`-apple-system, "SF Pro Text", "Segoe UI", Roboto, Arial`), no web-font download (offline demo). Body 16px/1.5, small 14px, micro 12px minimum. Headings 600-700, max 28px on screens with data. `font-variant-numeric: tabular-nums` for all amounts and metrics.
 - **Radii and depth:** cards 12px, controls 10px, pills 999px only for filter chips. Shadow at most `0 1px 2px rgba(15,27,45,.06)`; separation mostly by 1px borders.
 - **Spacing:** 4px base scale (4, 8, 12, 16, 24, 32, 48).
