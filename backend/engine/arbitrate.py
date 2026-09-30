@@ -71,7 +71,8 @@ def arbitrate(customer: Customer, moments: list[Moment], today: date, store: Sto
         if care_mode and m.category == "sales":
             log(m, "dropped", "vulnerability guard: care mode active, no sales")
             continue
-        suppressed = store.is_suppressed(customer.id, m.type, today)
+        # protection and care moments cannot be switched off through feedback
+        suppressed = None if m.category == "care" else store.is_suppressed(customer.id, m.type, today)
         if suppressed:
             log(m, "dropped", f"customer feedback: {suppressed}")
             continue

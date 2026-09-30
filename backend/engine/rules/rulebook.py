@@ -30,12 +30,37 @@ ConditionOp = Literal["eq", "ne", "gt", "gte", "lt", "lte", "in", "exists", "mis
 Scalar = str | int | float | bool | None
 
 
+# Twin fields a rule may read. Identity and consent fields are never targetable, and fields that
+# come from insurance contracts force requires_insurance_data (consent is checked per customer).
+ALLOWED_FIELDS = frozenset({
+    "age", "bolero_gains_realised_ytd", "bolero_unrealised_gains", "bolero_value", "children_count",
+    "company_car_fossil", "company_car_fuel", "company_car_lease_end", "company_car_lease_end_days",
+    "company_car_ordered_on", "contract_type", "current_balance", "gross_monthly_salary", "has_bolero",
+    "has_company_car", "has_hospitalisation", "has_mortgage", "has_pension_saving", "is_owner", "is_renting",
+    "mortgage_deed_date", "mortgage_epc", "net_monthly_income", "nonlife_premium_total", "oldest_child_age",
+    "pension_saving_ceiling", "pension_saving_ytd", "policy_kinds", "region", "renovation_deadline",
+    "renovation_months_left", "renting_years", "savings_balance", "self_employed", "youngest_child_age",
+})
+INSURANCE_FIELDS = frozenset({"has_hospitalisation", "nonlife_premium_total", "policy_kinds"})
+
+
+def _check_field(name: str | None) -> str | None:
+    if name is not None and name not in ALLOWED_FIELDS:
+        raise ValueError(f"field '{name}' is not available to rules")
+    return name
+
+
 class Condition(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     field: str = Field(pattern=r"^[a-z_][a-z0-9_]{1,40}$")
     op: ConditionOp
     value: Scalar | list[Scalar] = None
+
+    @field_validator("field")
+    @classmethod
+    def _allowed_field(cls, v: str) -> str:
+        return _check_field(v)
 
     @field_validator("value")
     @classmethod
@@ -83,6 +108,11 @@ class Impact(BaseModel):
 
     kind: Literal["none", "pct_above_exemption", "pct_of_field", "yearly_schedule"] = "none"
     field: str | None = Field(default=None, pattern=r"^[a-z_][a-z0-9_]{1,40}$")
+
+    @field_validator("field")
+    @classmethod
+    def _allowed_impact_field(cls, v: str | None) -> str | None:
+        return _check_field(v)
     pct: float | None = Field(default=None, ge=0, le=100)
     exemption: float = Field(default=0.0, ge=0)
     schedule: dict[str, float] | None = None  # "2026": 50 (percent)
@@ -106,7 +136,8 @@ class Impact(BaseModel):
         if self.kind == "none":
             return facts
         if self.kind == "yearly_schedule":
-            assert self.schedule is not None
+            if self.schedule is None:  # guarded by the model validator; explicit for safety
+                return facts
             facts["year"], facts["next_year"] = today.year, today.year + 1
             facts["pct_this_year"] = _schedule_value(self.schedule, today.year)
             facts["pct_next_year"] = _schedule_value(self.schedule, today.year + 1)
@@ -169,13 +200,29 @@ class WorldRule(BaseModel):
             self.visible_until = self.effective_date + timedelta(days=365)
         return self
 
+    def referenced_fields(self) -> set[str]:
+        fields = {c.field for c in self.conditions}
+        if self.impact.field:
+            fields.add(self.impact.field)
+        return fields
+
+    def text_fields(self) -> set[str]:
+        from engine.render import PLACEHOLDER
+        texts = [*self.title.values(), *self.summary.values(), *(self.summary_zero or {}).values(),
+                 *self.why.values(), *self.cta.values()]
+        names = {m.group(1) for t in texts for m in PLACEHOLDER.finditer(t or "")}
+        names |= {n[: -len("_label")] for n in names if n.endswith("_label")}  # labels derive from their base field
+        return names & ALLOWED_FIELDS
+
     def affected(self, twin: dict[str, Any]) -> bool:
         if self.region and twin.get("region") != self.region:
             return False
         return all(c.holds(twin) for c in self.conditions)
 
     def impact_facts(self, twin: dict[str, Any], today: date) -> dict[str, Any]:
-        facts = {k: v for k, v in twin.items() if not isinstance(v, (list, dict))}
+        # data minimisation: only the fields this rule actually uses (plus region), never the whole twin
+        keep = self.referenced_fields() | self.text_fields() | {"region"}
+        facts = {k: v for k, v in twin.items() if k in keep and not isinstance(v, (list, dict))}
         facts.update(self.impact.compute(twin, today))
         facts["title"] = self.title["en"]
         facts["effective_date"] = self.effective_date.isoformat()
@@ -432,7 +479,8 @@ def detect(customer: Customer, today: date, rulebook: Rulebook | None = None) ->
     twin = build_twin(customer, today)
     moments: list[Moment] = []
     for rule in book.rules():
-        if rule.requires_insurance_data and not customer.consents.use_insurance_data:
+        uses_insurance = rule.requires_insurance_data or bool(rule.referenced_fields() & INSURANCE_FIELDS)
+        if uses_insurance and not customer.consents.use_insurance_data:
             continue
         if today < (rule.visible_from or rule.effective_date) or today > (rule.visible_until or today):
             continue
