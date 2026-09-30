@@ -94,7 +94,9 @@ function allocationSection(a) {
     const n = el("p", "tag tag-warn", t("alloc_short", fmtEur(a.shortfall)));
     sec.appendChild(n);
   }
-  if (a.assumption) sec.appendChild(el("p", "muted", a.assumption)).style.fontSize = "14px";
+  const note = el("p", "muted", t("alloc_assumption", a.buffer_months || 6, fmtEur(a.net_monthly_income || 0)));
+  note.style.fontSize = "14px";
+  sec.appendChild(note);
   return sec;
 }
 

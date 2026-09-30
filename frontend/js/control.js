@@ -140,7 +140,7 @@ function grid(min) { const g = h('div'); g.style.display = 'grid'; g.style.gap =
 export function renderControl(root, tab, params) {
   renderSeq++;
   if (!TABS.includes(tab)) tab = 'overview';
-  const q = params && typeof params.toString === 'function' ? params.toString() : '';
+  const q = !params ? '' : typeof params.get === 'function' ? params.toString() : new URLSearchParams(params).toString();
   lastQuery[tab] = q ? '?' + q : '';
   clear(root);
   const page = h('div', 'control stack-4');

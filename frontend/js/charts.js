@@ -60,13 +60,14 @@ export function allocationBar(segments = [], { label, unit = "eur" } = {}) {
   const segs = segments.map((sg, i) => ({ ...sg, v: safe(sg.value), color: sg.color || PALETTE[i % PALETTE.length] }));
   const total = segs.reduce((a, b) => a + b.v, 0);
   const fig = figure(label);
-  const W = 600, H = 56, barY = 8, barH = 32;
+  const W = 600, H = 32, barY = 0, barH = 32;
   const summary = (label ? label + ": " : "") + segs.map((sg) => `${sg.label} ${fmtValue(sg.v, unit)}`).join(", ") + `. ${t("chart_total")} ${fmtValue(total, unit)}.`;
   const svg = svgRoot(W, H, summary);
   const hid = "hatch-" + (++uid);
   hatchDefs(svg, hid, "#9FB7CC");
   svg.appendChild(s("rect", { x: 0, y: barY, width: W, height: barH, rx: 6, fill: "#EEF2F6" }));
   let x = 0;
+  const labels = el("div", "alloc-labels");
   const drawn = segs.filter((sg) => sg.v > 0);
   drawn.forEach((sg, i) => {
     const w = total > 0 ? Math.max((sg.v / total) * W, 0) : 0;
@@ -77,13 +78,16 @@ export function allocationBar(segments = [], { label, unit = "eur" } = {}) {
     svg.appendChild(r);
     // direct label inside segment when wide enough
     const text = `${pct(sg.v, total)}%`;
-    if (w > 44) {
-      const dark = !(sg.pattern === "hatch" || sg.key === "remaining") && isDark(sg.color);
-      svg.appendChild(s("text", { x: (x + w / 2).toFixed(2), y: barY + barH / 2 + 5, "text-anchor": "middle", "font-size": 14, "font-weight": 700, fill: dark ? "#fff" : "#0F1B2D" }, text));
-    }
+    const lab = el("span", "alloc-label num", text);
+    lab.style.width = ((w / W) * 100).toFixed(3) + "%";
+    lab.setAttribute("aria-hidden", "true");
+    labels.appendChild(lab);
     x += w;
   });
-  fig.appendChild(svg);
+  svg.setAttribute("preserveAspectRatio", "none");
+  svg.setAttribute("height", String(H));
+  svg.classList.add("alloc-svg");
+  fig.append(labels, svg);
 
   // legend table (visible) with amounts
   const tbl = el("table", "legend-table");
@@ -127,6 +131,7 @@ function barChart(rows, { label, unit, onSelect, selected, showPct }) {
   const H = Math.max(data.length * (rowH + gap), rowH);
   const summary = (label ? label + ": " : "") + (data.length ? data.map((d) => `${d.label} ${fmtValue(d.v, unit)}${showPct ? ` (${pct(d.v, total)}%)` : ""}`).join(", ") : "0") + (showPct ? `. ${t("chart_total")} ${fmtValue(total, unit)}.` : ".");
   const svg = svgRoot(W, H, summary);
+  svg.style.maxWidth = W + "px";
   if (onSelect) svg.setAttribute("role", "group"), svg.setAttribute("aria-label", summary);
 
   data.forEach((d, i) => {

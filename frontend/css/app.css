@@ -225,6 +225,18 @@ body.has-bottom-nav #toast-root { bottom: 88px; }
 .swatch-hatch { background-image: repeating-linear-gradient(45deg, var(--chart-remaining) 0 3px, #fff 3px 6px); }
 .chart-total { font-size: 14px; color: var(--muted); margin-top: var(--s2); }
 
+.alloc-svg { height: 32px; border-radius: 6px; }
+.alloc-labels { display: flex; font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 4px; min-height: 18px; }
+.alloc-label { text-align: center; overflow: hidden; white-space: nowrap; }
+@media (max-width: 599px) {
+  .brand { gap: var(--s2); }
+  .brand-logo { height: 24px; }
+  .brand-words { padding-left: var(--s2); }
+  .brand-name { font-size: 15px; }
+  .brand-proto { font-size: 11px; max-width: 140px; }
+  .lang-btn { min-width: 34px; min-height: 36px; }
+}
+
 /* reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
