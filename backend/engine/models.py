@@ -126,10 +126,31 @@ class Bolero(BaseModel):
     gains_realised_ytd: float = 0.0
 
 
+class TermAccount(BaseModel):
+    amount: float
+    maturity_date: date
+    rate: float  # gross yearly rate in %
+
+
 class Products(BaseModel):
     mortgage: Mortgage | None = None
     pension_saving: PensionSaving | None = None
     bolero: Bolero | None = None
+    term_account: TermAccount | None = None
+
+
+class SecurityAlert(BaseModel):
+    """A payment the fraud engine held (e.g. a Verification of Payee close match)."""
+    kind: Literal["vop_close_match", "new_payee_high_amount"]
+    date: date
+    amount: float
+    payee_shown: str
+    payee_registered: str
+
+
+class Security(BaseModel):
+    guardian_angel_active: bool = False
+    recent_alert: SecurityAlert | None = None
 
 
 class Consents(BaseModel):
@@ -158,6 +179,7 @@ class Customer(BaseModel):
     policies: list[Policy] = Field(default_factory=list)
     products: Products = Field(default_factory=Products)
     consents: Consents = Field(default_factory=Consents)
+    security: Security = Field(default_factory=Security)
 
     def public_profile(self) -> dict[str, Any]:
         """What /me returns: no transaction list, no raw balances history."""

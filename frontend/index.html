@@ -4,7 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Kate Foresight</title>
-<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="tailwind.css">
+<!-- tailwind.css is built locally from this file (no CDN needed on demo day). Rebuild: see frontend/README.md -->
 <style>
   :root { --kbc: #00aeef; }
   body { font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
@@ -250,7 +251,7 @@
     if (data.care_mode) {
       const banner = el("div", "rounded-xl bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900");
       banner.appendChild(el("div", "font-semibold", "Care mode is on"));
-      banner.appendChild(el("div", "", "No offers while your income is disrupted. Only help, and a person when you want one."));
+      banner.appendChild(el("div", "", "Protection first: no offers right now. Only help, and a person when you want one."));
       body.appendChild(banner);
     }
     const head = el("div", "flex items-center justify-between text-xs text-slate-500");

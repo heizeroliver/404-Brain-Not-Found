@@ -100,6 +100,48 @@ TEMPLATES: dict[str, dict[str, dict[str, str]]] = {
                "why": "The renewal date {renewal_date} and the new premium are in your policy.",
                "cta": "Show two options"},
     },
+    "term_account_maturity": {
+        "nl": {"message": "Je termijnrekening van €{amount} vervalt op {maturity_date}, over {days} dagen. Zonder keuze komt "
+                          "het geld terug op je zichtrekening en brengt het niets op. Wil je vernieuwen of drie veilige opties zien?",
+               "why": "De vervaldatum van {maturity_date} staat in je contract.",
+               "cta": "Kies wat ermee gebeurt"},
+        "fr": {"message": "Votre compte à terme de €{amount} arrive à échéance le {maturity_date}, dans {days} jours. Sans choix, "
+                          "l'argent revient sur votre compte à vue sans rapporter. Renouveler ou voir trois options sûres ?",
+               "why": "L'échéance du {maturity_date} figure dans votre contrat.",
+               "cta": "Choisir la suite"},
+        "en": {"message": "Your term account of €{amount} matures on {maturity_date}, in {days} days. Without a choice the "
+                          "money returns to your current account and earns nothing. Renew, or see three safe options?",
+               "why": "The maturity date {maturity_date} is in your contract.",
+               "cta": "Choose what happens"},
+    },
+    "energy_bill_spike": {
+        "nl": {"message": "Je energiefacturen liggen de laatste drie maanden op gemiddeld €{recent}, tegenover €{base} ervoor "
+                          "(+{pct}%). Zullen we samen je budget en je energiecontract bekijken?",
+               "why": "Vergelijking van je eigen energiefacturen van de voorbije maanden.",
+               "cta": "Bekijk mijn energiekosten"},
+        "fr": {"message": "Vos factures d'énergie atteignent en moyenne €{recent} ces trois derniers mois, contre €{base} "
+                          "avant (+{pct} %). On regarde ensemble votre budget et votre contrat d'énergie ?",
+               "why": "Comparaison de vos propres factures d'énergie des derniers mois.",
+               "cta": "Voir mes coûts d'énergie"},
+        "en": {"message": "Your energy bills averaged €{recent} over the last three months, against €{base} before "
+                          "(+{pct}%). Shall we look at your budget and your energy contract together?",
+               "why": "A comparison of your own energy invoices over the past months.",
+               "cta": "Look at my energy costs"},
+    },
+    "payment_protection": {
+        "nl": {"message": "{first_name}, we hebben een betaling van €{amount} tegengehouden: de naam '{payee_shown}' klopt niet "
+                          "met de rekeninghouder. Een bank vraagt nooit om geld te verplaatsen. Een collega belt je vandaag terug.",
+               "why": "De naamcontrole van de begunstigde gaf een afwijking op {alert_date}.",
+               "cta": "Bel me terug"},
+        "fr": {"message": "{first_name}, nous avons retenu un paiement de €{amount} : le nom « {payee_shown} » ne correspond pas "
+                          "au titulaire du compte. Une banque ne demande jamais de déplacer votre argent. Un collègue vous rappelle aujourd'hui.",
+               "why": "La vérification du nom du bénéficiaire a signalé une différence le {alert_date}.",
+               "cta": "Rappelez-moi"},
+        "en": {"message": "{first_name}, we held a payment of €{amount}: the name '{payee_shown}' does not match the account "
+                          "holder. A bank never asks you to move money. A colleague will call you back today.",
+               "why": "The payee name check flagged a mismatch on {alert_date}.",
+               "cta": "Call me back"},
+    },
     "idle_cash": {
         "nl": {"message": "Op je spaarrekening staat €{balance}, al {months} maanden ruim boven een buffer van zes maanden. "
                           "Zo'n €{idle} kan misschien meer opbrengen. Drie veilige opties bekijken, zonder verplichting?",
