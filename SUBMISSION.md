@@ -8,19 +8,20 @@ Kate Foresight is a working proof of concept for scalable personalization at KBC
 
 ## (b) Video script (target 2:50, hard limit 3:00)
 
-Setup: restart `./run.sh` right before recording (clean goals and requests). Browser 1440 px wide at http://localhost:5173, NL selected, demo and admin passwords at hand, zoom 100%.
+Setup: restart `./run.sh` right before recording. Browser 1440×900, NL, logged out, passwords at hand.
 
 | Time | On screen (exact clicks) | Voice-over (English) |
 |---|---|---|
-| 0:00-0:15 | Login screen. | "KBC asked how a bank can understand what a customer needs and respond at the right moment, for 2.3 million customers. Our answer is one decision engine that reads three things: the customer's calendar, Belgium's calendar, and what the customer tells us." |
-| 0:15-0:40 | Log in as **lien**. Overview: the priority moment. Click **Waarom?**, then close with Esc. | "Lien, 29. Kate sees thirteen thousand seven hundred euros above a six-month income buffer, which is our prototype's assumption. Why now? The panel shows the reasons, the dates and the source, with the technical evidence one click deeper." |
-| 0:40-1:10 | Click **Plan je spaargeld**. Type `Ik wil €8.000 beschikbaar houden voor mijn verbouwing`, **Vraag Kate**, **Bevestig**. Point at the chart. Click **Overzicht**. | "But Lien knows something the data doesn't. She tells Kate she needs eight thousand euros for her renovation. Kate proposes a goal, Lien confirms, and the engine recalculates: twelve thousand three hundred buffer, eight thousand reserved, five thousand seven hundred remaining. The recommendation changes with it. Her intent, not our guess, and no money moves." |
-| 1:10-1:35 | Log out. **FR** optional. Log in as **marc**. On the company-car moment click **Vraag een adviseur**, confirm, show the AR id. | "Marc's diesel company car loses its tax deductibility. That is high stakes, so the engine recommends a person. He asks for an adviser and gets a request id. In this prototype no real call is placed, and we say so." |
-| 1:35-2:05 | Log out, log in as **admin**. Overview metrics, click the **Spaargeld dat stilstaat** bar, then open **Adviseurswachtrij**, click **Start behandeling**. | "KBC's control room: customers with a moment, moments, recommended adviser routing, and actual requests, each with its own definition. Click a bar to drill into the moments. And here is Marc's exact request, now in review." |
-| 2:05-2:30 | **Regelstudio**: show the illustrative template, click **Preview impact**. | "When Belgium changes a rule, it becomes data, not code. Preview shows which customers it would affect before anything is activated. This example is illustrative, not an existing law." |
-| 2:30-2:50 | **Vertrouwen & audit**, then back to Overview. | "Every decision is logged: shown, deferred or suppressed, and why. We measured ten thousand synthetic customers in 1.3 seconds on one process; 2.3 million is an extrapolation, and production needs shared storage and event triggers. Kate Foresight, by 404 Brain Not Found." |
+| 0:00-0:12 | Login screen. | "KBC asked how a bank can respond at exactly the right moment for 2.3 million customers. Kate Foresight is one decision engine over three things: your money history, your calendar and what you tell us." |
+| 0:12-0:40 | Log in as **lien**, open **Praat met Kate**. Click the chip or type "Waar ging mijn geld de voorbije drie maanden?". | "Lien asks where her money went. Kate answers for an exact period, first of July to thirtieth of September, with categories that add up to the total, and income and pension saving kept apart." |
+| 0:40-1:00 | Ask "Wat komt er de komende 90 dagen?". | "What's coming? Contract dates, legal changes and estimates from her own history, each labelled for what it is." |
+| 1:00-1:30 | Ask "Hou €8.000 beschikbaar voor mijn verbouwing", show the editable amount, click **Bevestig**. | "Then she tells Kate something no data shows: eight thousand euros is for her renovation. Kate proposes, Lien confirms, and the engine recalculates: buffer, reserved goal, and five thousand seven hundred left. No money moves." |
+| 1:30-1:45 | Ask "Waarom raad je dit aan?", open **Bronnen en aannames**. Click **Overzicht**: the recommendation now says €5.700. | "Why? The evidence, her goal and our assumptions, in the open. The overview changed with it." |
+| 1:45-2:05 | Log out, **marc**, **Vraag een adviseur** on the company-car moment, confirm. | "High-stakes moments go to a person. Marc requests an adviser; the prototype creates a real request, and says no call is actually placed." |
+| 2:05-2:35 | Log out, **admin**. Overview metrics and charts, then **Adviseurswachtrij**: Marc's request, **Start behandeling**. | "The operator sees the same decisions across 203 synthetic customers, recommendations labelled as recommendations, and Marc's exact request in the queue." |
+| 2:35-2:52 | Stay on the control room. | "Rules plus arbitration ran for 10,000 synthetic customers in 1.3 seconds on one process; 2.3 million is an extrapolation, and production needs shared storage and event triggers. Every route is token-scoped and Aikido-scanned. Kate Foresight, by 404 Brain Not Found." |
 
-If long, cut the audit step first. Rita (protective care mode) is an optional 10-second insert after Marc.
+If long, cut the Marc step (keep the operator queue by pre-creating one request before recording). Voice: only show the microphone if it worked on the recording laptop in a test run; otherwise type.
 
 ## (c) Final submission checklist
 
