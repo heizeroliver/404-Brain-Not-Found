@@ -54,6 +54,11 @@ const CSS = `
 .tk-rec { flex-direction: column; gap: 8px; }
 .tk-rec dd { font-weight: 400; color: var(--ink); }
 @media (max-width: 560px) { .tk-plans { grid-template-columns: 1fr; } }
+.tk-products { list-style: none; margin: 0; padding: 0; }
+.tk-products li { padding: 10px 0; border-bottom: 1px solid var(--line); }
+.tk-products li:first-child { padding-top: 0; } .tk-products li:last-child { border-bottom: 0; padding-bottom: 0; }
+.tk-prod-name { font-weight: 700; color: var(--navy); }
+.tk-prod-why { color: var(--blue-text); margin-top: 2px; }
 .talk-err { color: var(--danger); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .talk-empty { color: var(--muted); font-size: 14px; }
 @media (max-width: 767px) {
@@ -73,7 +78,7 @@ function ensureStyle() {
 }
 
 const COLORS = { buffer: "#0B325E", goal: "#00ACEF", remaining: "#9FB7CC" };
-const STARTERS = ["tk_starter_1", "tk_starter_2", "tk_starter_3", "tk_starter_4"];
+const STARTERS = ["tk_starter_1", "tk_starter_2", "tk_starter_3", "tk_starter_4", "tk_starter_5"];
 
 function btn(label, cls, onClick) {
   const b = el("button", "btn " + (cls || "btn-secondary"), label);
@@ -383,6 +388,18 @@ export async function renderTalk(root) {
       const card = el("div", "talk-card stack-md");
       if (chart) card.appendChild(chart);
       if (facts) card.appendChild(facts);
+      m.appendChild(card);
+    }
+    if (Array.isArray(r.products) && r.products.length) {
+      const card = el("div", "talk-card");
+      const ul = el("ul", "tk-products");
+      r.products.forEach((pr) => {
+        const li = el("li");
+        li.append(el("p", "tk-prod-name", pr.name || ""), el("p", "small", pr.summary || ""));
+        if (pr.why) li.appendChild(el("p", "small tk-prod-why", pr.why));
+        ul.appendChild(li);
+      });
+      card.appendChild(ul);
       m.appendChild(card);
     }
     if (r.intent === "goal_proposal" && r.proposal) m.appendChild(proposalNode(r.proposal, m, r.preview));

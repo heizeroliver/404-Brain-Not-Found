@@ -19,7 +19,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 import auth
 import config
-from engine import allocation, spending
+from engine import allocation, products, spending
 from engine.intent import _fold, amounts, parse_goal
 from engine.models import Customer, Goal, GoalPurpose
 
@@ -89,7 +89,8 @@ class Proposal(BaseModel):
 
 
 class TalkResponse(BaseModel):
-    intent: Literal["spending", "upcoming", "goal_proposal", "goal_saved", "why", "save_more", "briefing", "clarify"]
+    intent: Literal["spending", "upcoming", "goal_proposal", "goal_saved", "why", "save_more", "briefing", "clarify",
+                    "product", "out_of_scope"]
     message: str
     as_of: str
     period: dict[str, str] | None = None
@@ -99,6 +100,7 @@ class TalkResponse(BaseModel):
     assumptions: list[str] = Field(default_factory=list)
     proposal: Proposal | None = None
     preview: dict[str, Any] | None = None
+    products: list[dict[str, str]] = Field(default_factory=list)
     suggestions: list[Suggestion] = Field(min_length=2, max_length=4)
     context: dict[str, Any]
     synthetic: bool = True
@@ -114,6 +116,8 @@ Q = {
     "goal": {"nl": "Ik wil €8.000 beschikbaar houden voor mijn verbouwing",
              "en": "I want to keep €8,000 available for my renovation",
              "fr": "Je veux garder 8 000 € disponibles pour ma rénovation"},
+    "products": {"nl": "Welke KBC-producten passen bij mijn situatie?", "en": "Which KBC products fit my situation?",
+                 "fr": "Quels produits KBC correspondent à ma situation ?"},
     "save_more": {"nl": "Hoe kan ik meer sparen?", "en": "How can I save more?",
                   "fr": "Comment épargner davantage ?"},
 }
@@ -155,6 +159,9 @@ SYNTH = {"nl": "Synthetische demogegevens.", "en": "Synthetic demo data.", "fr":
 SCENARIO = {"nl": "Scenario op basis van gemeten uitgaven, geen advies.",
             "en": "Scenario based on measured spending, not advice.",
             "fr": "Scénario basé sur les dépenses mesurées, pas un conseil."}
+
+# contractual obligations are not "flexible spending"
+FIXED = {"rent", "mortgage", "insurance", "childcare", "notary"}
 
 BASIS_BY_TYPE = {
     "insurance_renewal_increase": "contract", "term_account_maturity": "contract",
@@ -227,16 +234,26 @@ _QUESTION = re.compile(
 
 def _detect(text: str) -> str:
     folded = _fold(text)
+    if products.out_of_scope(text):
+        return "out_of_scope"
     if any(k in folded for k in KEYWORDS["spending"]):
         return "spending"
     if any(k in folded for k in KEYWORDS["why"]):
         return "why"
     if amounts(text) and _GOAL_VERB.search(folded) and not _QUESTION.search(folded):
         return "goal"
+    if _is_product(text):
+        return "product"
     for intent in ("upcoming", "save_more"):
         if any(k in folded for k in KEYWORDS[intent]):
             return intent
     return "clarify"
+
+
+def _is_product(text: str) -> bool:
+    folded = _fold(text)
+    return products._GENERIC.search(folded) is not None or any(
+        products._kw(folded, _fold(k)) for p in products.PRODUCTS for k in p["keywords"])
 
 
 def _spending(customer: Customer, lang: str, ctx: TalkContext | None, text: str = "") -> TalkResponse:
@@ -431,26 +448,44 @@ def _why(customer: Customer, lang: str, ctx: TalkContext | None) -> TalkResponse
 def _save_more(customer: Customer, lang: str, ctx: TalkContext | None) -> TalkResponse:
     s = spending.summarize(customer, config.today(), 3, lang)
     obs = []
-    for r in s["rows"][:3]:
+    flexible = [r for r in s["rows"] if r["key"] not in FIXED]
+    fixed = [r["label"] for r in s["rows"] if r["key"] in FIXED]
+    for r in flexible[:3]:
         monthly = r["value"] / 3
         obs.append({"nl": f"{r['label']}: gemiddeld {_eur(monthly, lang)}/maand; 10% minder = {_eur(monthly * 0.1, lang)}/maand.",
                     "en": f"{r['label']}: {_eur(monthly, lang)}/month on average; 10% less = {_eur(monthly * 0.1, lang)}/month.",
                     "fr": f"{r['label']} : {_eur(monthly, lang)}/mois en moyenne ; 10 % de moins = {_eur(monthly * 0.1, lang)}/mois."}[lang])
-    msg = {"nl": "Drie scenario's op basis van je grootste uitgaven.", "en": "Three scenarios from your largest spending.",
-           "fr": "Trois scénarios basés sur vos plus grosses dépenses."}[lang] if obs else \
+    msg = {"nl": "Scenario's voor je grootste aanpasbare uitgaven; huur, krediet en verzekeringen tellen niet mee.",
+           "en": "Scenarios for your largest adjustable spending; rent, loans and insurance are left out.",
+           "fr": "Scénarios pour vos plus grosses dépenses ajustables ; loyer, crédit et assurances exclus."}[lang] if obs else \
         {"nl": "Geen uitgaven gemeten.", "en": "No spending measured.", "fr": "Aucune dépense mesurée."}[lang]
     a, b = s["from"], s["to"]
     return _resp("save_more", msg, lang, _ctx(ctx), _sugg(lang, "spending", "goal", "upcoming"),
                  period={"from": a.isoformat(), "to": b.isoformat(), "label": _period_label(a, b, lang)},
-                 chart={"kind": "category_bars", "unit": "eur", "rows": s["rows"][:3],
-                        "total": round(sum(r["value"] for r in s["rows"][:3]), 2)},
-                 evidence=obs, assumptions=[SCENARIO[lang], SYNTH[lang]])
+                 chart={"kind": "category_bars", "unit": "eur", "rows": flexible[:3],
+                        "total": round(sum(r["value"] for r in flexible[:3]), 2)},
+                 evidence=obs, assumptions=[SCENARIO[lang], SYNTH[lang]] + ([{
+                     "nl": "Vaste verplichtingen niet meegeteld: ", "en": "Fixed obligations left out: ",
+                     "fr": "Obligations fixes exclues : "}[lang] + ", ".join(fixed)] if fixed else []))
+
+
+def _product(customer: Customer, text: str, lang: str, ctx: TalkContext | None) -> TalkResponse:
+    ans = products.answer(text, customer, lang, allocation.compute(customer))
+    if not ans:
+        return _clarify(lang, ctx)
+    return _resp("product", ans["message"], lang, _ctx(ctx), _sugg(lang, "why", "upcoming", "spending"),
+                 products=ans["products"], evidence=ans["evidence"], assumptions=ans["assumptions"] + [SYNTH[lang]])
+
+
+def _scope(text: str, lang: str, ctx: TalkContext | None) -> TalkResponse:
+    return _resp("out_of_scope", products.scope_message(products.out_of_scope(text) or "offtopic", lang), lang,
+                 _ctx(ctx), _sugg(lang, "products", "spending", "upcoming"))
 
 
 def _clarify(lang: str, ctx: TalkContext | None) -> TalkResponse:
     msg = {"nl": "Dat begrijp ik niet. Je kunt me dit vragen:", "en": "I didn't get that. You can ask me:",
            "fr": "Je n'ai pas compris. Vous pouvez me demander :"}[lang]
-    return _resp("clarify", msg, lang, _ctx(ctx), _sugg(lang, "spending", "upcoming", "goal", "why"))
+    return _resp("clarify", msg, lang, _ctx(ctx), _sugg(lang, "spending", "upcoming", "goal", "products"))
 
 
 # ----------------------------------------------------------------- routes --
@@ -484,6 +519,10 @@ def talk(body: TalkRequest, customer_id: str = Depends(auth.current_customer_id)
         return _why(customer, lang, body.context)
     if intent == "save_more":
         return _save_more(customer, lang, body.context)
+    if intent == "product":
+        return _product(customer, body.text, lang, body.context)
+    if intent == "out_of_scope":
+        return _scope(body.text, lang, body.context)
     return _clarify(lang, body.context)
 
 
