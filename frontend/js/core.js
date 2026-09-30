@@ -68,13 +68,38 @@ export function setLang(lang) {
 // ------------------------------------------------------------------ API
 export const API_BASE = window.API_BASE_URL || (location.port === "5173" ? "http://localhost:8000" : "");
 
+// In-flight requests, aborted on logout / account switch so a stale authenticated response
+// can never render into the next session.
+const inflight = new Set();
+export function abortAllRequests() {
+  for (const c of [...inflight]) { try { c.abort(); } catch (_) {} }
+  inflight.clear();
+}
+export class StaleSessionError extends Error {
+  constructor() { super("Session changed"); this.name = "StaleSessionError"; this.stale = true; }
+}
+
 export async function api(path, { method = "GET", body, lang = false, headers: extra } = {}) {
+  const sentToken = state.token;
+  const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+  if (ctrl) inflight.add(ctrl);
+  try {
+    const out = await apiInner(path, { method, body, lang, headers: extra, signal: ctrl ? ctrl.signal : undefined });
+    if (state.token !== sentToken) throw new StaleSessionError();
+    return out;
+  } catch (e) {
+    if (state.token !== sentToken || (e && e.name === "AbortError")) throw new StaleSessionError();
+    throw e;
+  } finally { if (ctrl) inflight.delete(ctrl); }
+}
+
+async function apiInner(path, { method, body, lang, headers: extra, signal }) {
   let url = API_BASE + path;
   if (lang) url += (url.includes("?") ? "&" : "?") + "lang=" + encodeURIComponent(state.lang);
   const headers = { Accept: "application/json", ...(extra || {}) };
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (state.token) headers["Authorization"] = "Bearer " + state.token;
-  const res = await fetch(url, { method, headers, body: body === undefined ? undefined : (typeof body === "string" ? body : JSON.stringify(body)) });
+  const res = await fetch(url, { method, headers, signal, body: body === undefined ? undefined : (typeof body === "string" ? body : JSON.stringify(body)) });
   if (res.status === 401 && state.token) {
     window.dispatchEvent(new CustomEvent("kate:logout", { detail: { reason: "expired" } }));
     throw new Error("Session expired");

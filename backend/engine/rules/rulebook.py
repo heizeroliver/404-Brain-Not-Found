@@ -42,6 +42,13 @@ ALLOWED_FIELDS = frozenset({
     "renovation_months_left", "renting_years", "savings_balance", "self_employed", "youngest_child_age",
 })
 INSURANCE_FIELDS = frozenset({"has_hospitalisation", "nonlife_premium_total", "policy_kinds"})
+# every twin key derived from insurance contracts (stripped when the customer has not consented)
+INSURANCE_DERIVED_KEYS = INSURANCE_FIELDS | {"policy_kinds_text"}
+
+
+def strip_insurance(twin: dict[str, Any]) -> dict[str, Any]:
+    """The twin without any insurance-derived key (insurance-data opt-out)."""
+    return {k: v for k, v in twin.items() if k not in INSURANCE_DERIVED_KEYS}
 
 
 def _check_field(name: str | None) -> str | None:
@@ -183,6 +190,9 @@ class WorldRule(BaseModel):
     human_review: bool = False
     legal_basis: str = Field(default="legitimate_interest", max_length=80)
     requires_insurance_data: bool = False
+    # informational | protective | commercial. None = decided by origin: built-in rules are
+    # informational, admin-published rules are treated as commercial (marketing consent needed).
+    kind: Literal["info", "protective", "commercial"] | None = None
     source_url: str | None = Field(default=None, max_length=300, pattern=r"^https://[^\s<>\"']+$")
 
     @model_validator(mode="after")
@@ -214,6 +224,18 @@ class WorldRule(BaseModel):
         names |= {n[: -len("_label")] for n in names if n.endswith("_label")}  # labels derive from their base field
         return names & ALLOWED_FIELDS
 
+    def uses_insurance(self) -> bool:
+        names = self.referenced_fields() | self.text_fields()
+        texts = [*self.title.values(), *self.summary.values(), *(self.summary_zero or {}).values(),
+                 *self.why.values(), *self.cta.values(), *self.evidence]
+        from engine.render import PLACEHOLDER
+        names |= {m.group(1) for t in texts for m in PLACEHOLDER.finditer(t or "")}
+        return self.requires_insurance_data or bool(names & INSURANCE_DERIVED_KEYS)
+
+    def category(self, builtin: bool) -> str:
+        kind = self.kind or ("info" if builtin else "commercial")
+        return "sales" if kind == "commercial" else "info"
+
     def affected(self, twin: dict[str, Any]) -> bool:
         if self.region and twin.get("region") != self.region:
             return False
@@ -228,7 +250,7 @@ class WorldRule(BaseModel):
         facts["effective_date"] = self.effective_date.isoformat()
         return facts
 
-    def to_moment(self, twin: dict[str, Any], today: date) -> Moment:
+    def to_moment(self, twin: dict[str, Any], today: date, builtin: bool = True) -> Moment:
         facts = self.impact_facts(twin, today)
         start = today if self.effective_date <= today else self.effective_date
         return Moment(
@@ -242,7 +264,7 @@ class WorldRule(BaseModel):
             legal_basis=self.legal_basis,
             human_review=self.human_review,
             source="world_rule",
-            category=CATEGORY,
+            category=self.category(builtin),
             facts={k: v for k, v in facts.items() if isinstance(v, (str, int, float, bool)) or v is None},
         )
 
@@ -449,17 +471,25 @@ class Rulebook:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._rules: dict[str, WorldRule] = {}
+        self._builtin_ids: frozenset[str] = frozenset()
         self.reset()
 
     def reset(self) -> None:
         with self._lock:
             self._rules = {r["id"]: WorldRule.model_validate(r) for r in BUILTIN_RULES}
+            self._builtin_ids = frozenset(self._rules)
 
     def rules(self) -> list[WorldRule]:
-        return list(self._rules.values())
+        with self._lock:  # snapshot: concurrent publication cannot break iteration
+            return list(self._rules.values())
 
     def get(self, rule_id: str) -> WorldRule | None:
-        return self._rules.get(rule_id)
+        with self._lock:
+            return self._rules.get(rule_id)
+
+    def is_builtin(self, rule_id: str) -> bool:
+        with self._lock:
+            return rule_id in self._builtin_ids
 
     def add(self, rule: WorldRule) -> WorldRule:
         with self._lock:
@@ -477,13 +507,15 @@ RULEBOOK = Rulebook()
 def detect(customer: Customer, today: date, rulebook: Rulebook | None = None) -> list[Moment]:
     book = rulebook or RULEBOOK
     twin = build_twin(customer, today)
+    insurance_ok = customer.consents.use_insurance_data
+    if not insurance_ok:  # field-level authorisation: insurance facts never reach any rule or narrator
+        twin = strip_insurance(twin)
     moments: list[Moment] = []
     for rule in book.rules():
-        uses_insurance = rule.requires_insurance_data or bool(rule.referenced_fields() & INSURANCE_FIELDS)
-        if uses_insurance and not customer.consents.use_insurance_data:
+        if rule.uses_insurance() and not insurance_ok:
             continue
         if today < (rule.visible_from or rule.effective_date) or today > (rule.visible_until or today):
             continue
         if rule.affected(twin):
-            moments.append(rule.to_moment(twin, today))
+            moments.append(rule.to_moment(twin, today, builtin=book.is_builtin(rule.id)))
     return moments
