@@ -295,7 +295,7 @@ def overview(customer_id: str = Depends(auth.current_customer_id), lang: Lang = 
 def timeline2(customer_id: str = Depends(auth.current_customer_id), lang: Lang = LANG_QUERY,
               days: int = Query(90)) -> dict[str, Any]:
     if days not in (90, 365):
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "days must be 90 or 365")
+        raise HTTPException(422, "days must be 90 or 365")
     api = _api()
     customer = api._in_language(api._customer(customer_id), lang)
     today = config.today()
