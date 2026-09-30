@@ -42,9 +42,14 @@ Tab **Praat met Kate** answers four supported question types from the customer's
 
 - **Kate Talk understands amounts in questions.** "Why is €5,700 available?" is answered as a why question, not turned into a goal; "Did I spend €100 on groceries?" gets an honest "I can't check a single payment, only category totals"; several ambiguous amounts lead to a clarifying question.
 - **"What changes if you confirm?"** Before a goal is saved, Kate shows current vs proposed plan (savings, modeled buffer as an assumption, reserved, remaining), the recommendation before and after, and **Apply this plan** / **Keep my current plan**. The preview (`POST /me/talk/goal/preview`) stores nothing. Oversized goals show the shortfall separately; funded chart segments always add up to the savings.
-- **Voice robustness.** The transcript is shown for review before sending, spoken answers do not overlap, and a voice failure keeps the text answer. Live ElevenLabs is not verified (tested with mocks, no key in the test environment).
+- **Voice (ElevenLabs Scribe + TTS, push-to-talk).** A live button state (pulsing ring, recording dot, timer, then a spinner while transcribing). The transcript is shown for review before sending, spoken answers do not overlap, and a voice failure keeps the text answer. Tested in the browser with a fake microphone and mocked provider; the live provider call is checked on the demo laptop / Cloud Run (our build sandbox blocks the provider).
 - **Decision receipt in the control room.** Per customer: situation recognised, recommendation shown, suggestions withheld with the recorded reason (e.g. "Sales suggestions paused while we help"), items deferred by the frequency cap, channel, and advisor request status with its AR id.
-- **Scoped answers.** Kate answers only about KBC products and your own data.
+- **Scoped answers.** Kate answers only about KBC products (savings, term account, pension saving, investment plan, home and renovation loans, insurance, KBC Mobile) linked to your own data, as information, not advice. Other banks and off-topic questions are declined politely. "How can I save more?" leaves fixed obligations (rent, loans, insurance) out.
+- **Money calendar** (Timeline tab). Your own moments plus Belgian dates for the next 12 months: pension saving and long-term saving deadlines, tax-free savings interest, Tax-on-web, the tax assessment, advance payments for the self-employed, property tax, road tax, insurance notice periods, rent indexation, holiday pay, end-of-year bonus, Groeipakket. Each item has a basis tag (legal date / typical / estimate), a tip and a source; "For you" is computed from the customer's data. Filter chips by category, grouped by month.
+- **Durable state option.** `STORAGE=memory|firestore`: goals, consents and advisor requests can be stored in Firestore (write first, truthful 503 when a save fails, one open request per customer and moment). Memory stays the default for the local demo. Feedback, frequency caps, added rules and rate limits remain per process, so the service runs as one instance.
+- **Cloud Run with Secret Manager.** `scripts/deploy_cloud_run.sh` stores the JWT secret, demo passwords and ElevenLabs key in Secret Manager, uses a dedicated runtime service account (no key files) and caps the service at one instance. Steps and rollback: [docs/DEPLOY.md](docs/DEPLOY.md).
+- **Security, second Aikido round.** Insurance-data opt-out enforced field by field (rules, customer twin, care mode); marketing consent enforced on what a moment actually offers, not its label; rulebook snapshots under a lock; PBKDF2 flood protection; logout aborts in-flight requests.
+- **Look and feel.** Nunito Sans (self-hosted, OFL), the closest free match to KBC's Museo Sans; consistent spacing. For local recordings only, `DEMO_QUICK_LOGIN=1` makes the persona cards log in with one click (ignored in production).
 
 ## Screenshots (current UI)
 
@@ -71,7 +76,7 @@ cd 404-Brain-Not-Found
 
 `run.sh` creates `.venv`, installs `backend/requirements.lock`, writes `backend/.env` with a generated JWT secret and demo password (printed once, stored as `DEMO_PASSWORD`), then starts the API on :8000 and the app on :5173. Open **http://localhost:5173**, click a persona card, enter the demo password, click **Open de app**.
 
-**Demo path (3 minutes, EN):** full recording script with click paths and fallbacks in [docs/DEMO_RUN.md](docs/DEMO_RUN.md). Restart `./run.sh` first (state is in memory), click **EN** in the header.
+**Demo path (3 minutes, EN):** full recording script with click paths and fallbacks in [docs/DEMO_RUN.md](docs/DEMO_RUN.md). Restart `./run.sh` first (the local demo keeps state in memory), click **EN** in the header.
 1. **lien** → **Timeline** (`#/customer/timeline`), 12 months: reminder windows, a legal deadline, a contract renewal and an estimated holiday pay, each labelled.
 2. **Talk to Kate** (`#/customer/talk`): type `Keep €8,000 available for my renovation` → **What changes if you confirm?** (remaining €13,700 → €5,700, buffer €12,300 is a modeled assumption; the preview saves nothing) → **Apply this plan** → ask `Why do you recommend this?`.
 3. **rita** → "We held a payment" → **Ask an adviser** → **Request contact**: a prototype request id (AR-…); no real adviser is contacted.
@@ -109,7 +114,7 @@ cd 404-Brain-Not-Found
 - **Frequency caps** (1 pushed moment per customer per week unless high stakes) keep 2.3M customers from being spammed.
 - **Feedback loop.** Not relevant and Never adjust affinity per customer and per moment type; aggregate opt-outs per rule are visible in the control room so KBC can retire a rule that annoys people.
 - **EU hosting** in Google Cloud europe-west1 (Belgium) for data residency; hosting location alone does not make a system compliant. The LLM, when used, receives structured fields for one customer only.
-- **Today vs production:** the prototype keeps state in process memory and runs as one instance (a restart resets goals, feedback, requests and added rules). Production path (proposed, not built): Cloud Run for API and workers, Firestore or Cloud SQL for customer state and requests, Pub/Sub for event-driven re-evaluation with idempotent deliveries and shared frequency caps, and BigQuery or partitioned workers for cohort computation, with the control room reading precomputed aggregates.
+- **Today vs production:** the prototype runs as one instance; by default state is in process memory, and goals, consents and advisor requests can be moved to Firestore (`STORAGE=firestore`). Production path (proposed, not built): Cloud Run for API and workers, Firestore or Cloud SQL for customer state and requests, Pub/Sub for event-driven re-evaluation with idempotent deliveries and shared frequency caps, and BigQuery or partitioned workers for cohort computation, with the control room reading precomputed aggregates.
 
 ## Security (Aikido)
 
@@ -141,8 +146,8 @@ Aikido scan results before and after our fixes:
 - **Voice notes** need `ELEVENLABS_API_KEY` and voice ids in `backend/.env`; without them the Listen button shows a notice with the line Kate would say.
 - **Data is synthetic.** No real customer is represented. Belgian figures come from public sources; the example rule in the control room is marked illustrative.
 - **Admin UI is English only**; the customer app is NL/EN/FR. Evidence strings in Why? are English (audit language).
-- **State is in memory**: feedback, consents, goals and added rules reset on restart. No advisor cockpit yet.
-- **Cloud Run** deploy is scripted (`scripts/deploy_cloud_run.sh`, europe-west1); the demo video runs locally.
+- **State**: in memory by default (a restart resets it). With `STORAGE=firestore`, goals, consents and advisor requests persist; the Firestore path is tested against an in-process fake, not yet against a live database. Feedback, frequency caps and added rules stay per process.
+- **Cloud Run** deploy is scripted (`scripts/deploy_cloud_run.sh`, europe-west1, Secret Manager, one instance); the demo video runs locally.
 
 ## Repo map
 
@@ -174,7 +179,7 @@ backend/
   goals_api.py            /me/goals routes (token-scoped)
   scripts/benchmark.py    throughput benchmark
   data/generate.py        seeded synthetic dataset (203 customers)
-  tests/                  67 pytest tests: security, rules, arbitration, language, goals
+  tests/                  pytest suite (175 tests): security, rules, arbitration, language, goals, talk, calendar, persistence
   requirements.lock       pinned dependencies
 ```
 
