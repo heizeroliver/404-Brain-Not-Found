@@ -1,7 +1,8 @@
 """Authentication and authorization.
 
-- One demo password (env DEMO_PASSWORD) shared by every persona and the admin
-  user. It is hashed with PBKDF2 at startup and compared in constant time.
+- One demo password (env DEMO_PASSWORD) shared by every persona; the admin user
+  has its own ADMIN_PASSWORD (dev falls back to DEMO_PASSWORD, production refuses).
+  Both are hashed with PBKDF2 at startup and compared in constant time.
   Demo-only: a real deployment would use itsme / the KBC identity platform.
 - JWT (HS256, 8 hours) with claims sub (customer id or "admin") and role.
 - Every /me/* route derives the customer id from the token only. There is no
@@ -35,11 +36,12 @@ def _hash(password: str) -> bytes:
 
 
 _DEMO_HASH = _hash(config.demo_password())
+_ADMIN_HASH = _hash(config.admin_password())
 
 
-def verify_password(password: str) -> bool:
-    """Constant-time comparison against the hashed demo password."""
-    return hmac.compare_digest(_hash(password), _DEMO_HASH)
+def verify_password(password: str, admin: bool = False) -> bool:
+    """Constant-time comparison against the hashed demo (or admin) password."""
+    return hmac.compare_digest(_hash(password), _ADMIN_HASH if admin else _DEMO_HASH)
 
 
 class Principal(BaseModel):
@@ -56,7 +58,7 @@ def create_token(subject: str, role: Role) -> str:
 
 def decode_token(token: str) -> Principal:
     payload = jwt.decode(token, _SECRET, algorithms=[ALGORITHM], issuer="kate-foresight",
-                         options={"require": ["exp", "iat", "sub", "iss"]})
+                         options={"require": ["exp", "iat", "sub", "iss", "role"]})
     role = payload.get("role")
     if role not in ("customer", "admin") or not isinstance(payload.get("sub"), str):
         raise jwt.InvalidTokenError("bad claims")

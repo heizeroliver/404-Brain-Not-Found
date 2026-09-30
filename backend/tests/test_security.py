@@ -173,3 +173,72 @@ def test_security_headers_and_cors_restriction(client):
 def test_no_debug_surfaces(client):
     assert client.get("/docs").status_code == 404
     assert client.get("/openapi.json").status_code == 404
+
+
+# ------------------------------------------------------- pre-audit hardening
+
+def test_customer_demo_password_does_not_grant_admin(client):
+    app.state.limiter.reset()
+    try:
+        assert login(client, "admin", PASSWORD).status_code == 401
+        r = login(client, "admin", "test-admin-password")
+        assert r.status_code == 200 and r.json()["role"] == "admin"
+        assert login(client, "lien", "test-admin-password").status_code == 401
+    finally:
+        app.state.limiter.reset()
+
+
+def test_token_without_role_claim_is_rejected(client):
+    now = int(time.time())
+    token = jwt.encode({"sub": "lien", "iat": now, "exp": now + 600, "iss": "kate-foresight"},
+                       auth._SECRET, algorithm="HS256")
+    assert client.get("/me", headers={"Authorization": f"Bearer {token}"}).status_code == 401
+    none_alg = jwt.encode({"sub": "admin", "role": "admin", "iat": now, "exp": now + 600,
+                           "iss": "kate-foresight"}, None, algorithm="none")
+    assert client.get("/admin/overview", headers={"Authorization": f"Bearer {none_alg}"}).status_code == 401
+
+
+def test_feedback_only_for_known_moment_types(client, headers_for):
+    lien = headers_for("lien")
+    r = client.post("/me/feedback", json={"moment_type": "made_up_type", "action": "never"}, headers=lien)
+    assert r.status_code == 404
+    assert not store.feedback
+
+
+def test_oversized_body_is_refused(client, headers_for):
+    big = {"customer_id": "lien", "password": "x" * (70 * 1024)}
+    assert client.post("/login", json=big).status_code == 413
+
+
+def _rule(**over):
+    base = {"id": "dos_rule", "title": {"en": "x"}, "summary": {"en": "{amount:999999999d}"},
+            "effective_date": "2026-10-01", "level": "kbc",
+            "conditions": [{"field": "savings_balance", "op": "gt", "value": 0}],
+            "impact": {"kind": "pct_of_field", "field": "savings_balance", "pct": 1},
+            "evidence": ["{savings_balance:.99999999f}"], "actions": ["talk_to_advisor"]}
+    base.update(over)
+    return base
+
+
+def test_admin_rule_templates_cannot_blow_up_formatting(client, headers_for):
+    admin = headers_for("admin", "admin")
+    assert client.post("/admin/rules", json=_rule(), headers=admin).status_code == 201
+    feed = client.get("/me/moments", headers=headers_for("lien")).json()["moments"]
+    m = next(m for m in feed if m["type"] == "dos_rule")
+    assert len(m["message"]) < 200 and all(len(e) < 200 for e in m["evidence"])
+
+
+def test_admin_rule_size_limits(client, headers_for):
+    admin = headers_for("admin", "admin")
+    many = [{"field": "region", "op": "eq", "value": "flanders"}] * 13
+    assert client.post("/admin/rules", json=_rule(conditions=many), headers=admin).status_code == 422
+    long_list = [{"field": "region", "op": "in", "value": ["a"] * 21}]
+    assert client.post("/admin/rules", json=_rule(conditions=long_list), headers=admin).status_code == 422
+    long_str = [{"field": "region", "op": "eq", "value": "a" * 101}]
+    assert client.post("/admin/rules", json=_rule(conditions=long_str), headers=admin).status_code == 422
+    sched = {"kind": "yearly_schedule", "schedule": {str(2000 + i): 1 for i in range(21)}}
+    assert client.post("/admin/rules", json=_rule(impact=sched), headers=admin).status_code == 422
+    for url in ("javascript:alert(1)", "http://x.example", "file:///etc/passwd"):
+        assert client.post("/admin/rules", json=_rule(source_url=url), headers=admin).status_code == 422
+    assert client.post("/admin/rules", json=_rule(id="Bad-Id"), headers=admin).status_code == 422
+    assert client.post("/admin/rules", json=_rule(field_x=1), headers=admin).status_code == 422

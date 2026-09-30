@@ -162,6 +162,21 @@ class Consents(BaseModel):
     marketing: bool = True
 
 
+GoalPurpose = Literal["renovation", "car", "travel", "education", "emergency_buffer", "house_purchase", "other"]
+
+
+class Goal(BaseModel):
+    """Customer-stated intent ("keep €8,000 for my renovation"). Only the customer sets it."""
+    model_config = ConfigDict(extra="forbid")
+
+    id: str = Field(pattern=r"^g_[a-f0-9]{12}$")
+    purpose: GoalPurpose
+    amount: float = Field(gt=0, le=1_000_000)
+    keep_accessible: bool = True
+    created: date
+    source: Literal["customer"] = "customer"
+
+
 class Customer(BaseModel):
     id: str = Field(pattern=r"^[a-z0-9_]{2,40}$")
     name: str
@@ -180,6 +195,7 @@ class Customer(BaseModel):
     products: Products = Field(default_factory=Products)
     consents: Consents = Field(default_factory=Consents)
     security: Security = Field(default_factory=Security)
+    goals: list[Goal] = Field(default_factory=list)  # attached per request from the store, never from data
 
     def public_profile(self) -> dict[str, Any]:
         """What /me returns: no transaction list, no raw balances history."""

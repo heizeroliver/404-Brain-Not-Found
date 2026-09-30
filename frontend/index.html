@@ -51,23 +51,23 @@
   .tabbar .tab[aria-current="page"] { color: var(--kbc-navy); font-weight: 700; }
   .tabbar .tab[aria-current="page"] svg { color: var(--kbc-blue-text); }
   /* cards and chips */
-  .card { background: var(--card); border-radius: var(--radius-card); border: 1px solid var(--line);
-          box-shadow: 0 1px 2px rgba(15, 27, 45, .04), 0 8px 24px rgba(0, 54, 101, .06); }
-  .moment { position: relative; overflow: hidden; }
-  .moment::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--accent, var(--kbc-blue)); }
-  .chip { display: inline-flex; align-items: center; gap: .3rem; border-radius: 9999px; padding: .15rem .6rem;
-          font-size: 12px; font-weight: 600; line-height: 1.4; white-space: nowrap; }
-  .chip-cal { background: var(--kbc-blue-soft); color: var(--kbc-navy); }
-  .chip-world { background: #E8EDF5; color: var(--kbc-navy); }
-  .chip-care { background: var(--care-bg); color: var(--care-ink); }
-  .chip-neutral { background: #EEF2F6; color: #334155; }
-  .care-banner { background: var(--care-bg); color: var(--care-ink); border-radius: 16px; }
+  .card { background: var(--card); border-radius: 16px; border: 1px solid #E3E8EF; box-shadow: 0 1px 2px rgba(15, 27, 45, .05); }
+  .moment { position: relative; }
+  .chip { display: inline-flex; align-items: center; font-size: 13px; font-weight: 600; line-height: 1.4; white-space: nowrap; color: var(--muted); }
+  .chip + .chip::before { content: "·"; margin: 0 .45rem; color: #94A3B8; font-weight: 400; }
+  .chip-cal, .chip-world { color: var(--kbc-navy); }
+  .chip-neutral { color: var(--muted); font-weight: 500; }
+  .chip-care { color: var(--care-ink); }
+  .care-banner { background: #FFF8EC; color: var(--care-ink); border: 1px solid #F3DDB5; border-radius: 16px; }
   .fade { animation: fade .25s ease-out; }
   @keyframes fade { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: none; } }
   @media (prefers-reduced-motion: reduce) { .fade { animation: none; } .btn { transition: none; } .btn:active { transform: none; } }
   table td, table th { padding: .4rem .5rem; text-align: left; }
   table tr + tr td { border-top: 1px solid var(--line); }
   .tile-num { font-variant-numeric: tabular-nums; }
+  .hidden { display: none !important; }
+  .avatar { width: 44px; height: 44px; border-radius: 9999px; background: var(--kbc-blue-soft); color: var(--kbc-navy);
+            display: flex; align-items: center; justify-content: center; font-weight: 700; }
   .lang-btn { min-width: 44px; min-height: 36px; border-radius: 9px; font-weight: 700; font-size: 13px; color: #CFEFFC; cursor: pointer; }
   .lang-btn[aria-pressed="true"] { background: #fff; color: var(--kbc-navy); }
 </style>
@@ -75,7 +75,8 @@
 <body class="bg-slate-100 text-slate-800 min-h-screen">
 <script>
   // Configure where the API runs. Override before load with window.API_BASE_URL if needed.
-  const API_BASE = window.API_BASE_URL || "http://localhost:8000";
+  // Local dev (./run.sh): frontend on :5173, API on :8000. Deployed (Cloud Run): same origin.
+  const API_BASE = window.API_BASE_URL || (location.port === "5173" ? "http://localhost:8000" : "");
 </script>
 
 <header class="brand-bar">
@@ -194,10 +195,10 @@
   const I18N = {
     nl: {
       tagline: "Prototype voor de KBC-case · Tectonic Hackathon", logout: "Afmelden",
-      login_title: "Wie opent de app?", login_sub: "Kies een fictieve klant. Eén demowachtwoord voor iedereen (getoond door run.sh, bewaard in backend/.env).",
+      login_title: "Wie opent de app?", login_sub: "Kies een fictieve klant en open de app zoals die klant hem ziet.",
       persona: "Persona", password: "Demowachtwoord", open_app: "Open de app",
-      tab_home: "Home", tab_timeline: "Komende 12 maanden", tab_data: "Mijn gegevens",
-      ai_chip: "AI-assistent · Kate", why_title: "Waarom zie ik dit?", signals: "Gebruikte signalen",
+      tab_home: "Home", tab_timeline: "Tijdlijn", tab_data: "Mijn gegevens",
+      ai_chip: "AI-assistent · Kate", why_title: "Waarom zie ik dit?", signals: "Gelogde signalen",
       why_correct: "Je kan dit bijsturen: 'Niet relevant' verlaagt het gewicht, 'Nooit' zet het voor jou uit. Elke beslissing wordt gelogd.",
       side_hint: "Tik op Waarom? bij een kaart om de signalen, de regel, de zekerheid en de rechtsgrond te zien.",
       greet: "Dag", comfort: "digitaal comfort", loading: "Laden…", load_error: "Kon niet laden: ",
@@ -223,13 +224,20 @@
       c_mkt: "Voorstellen over producten", c_mkt_h: "Uit = alleen informatie en bescherming, geen aanbiedingen (AVG art. 21).",
       c_note: "Je feedback op kaarten (Niet nu / Niet relevant / Nooit) wordt ook bewaard en verandert wat je ziet.",
       invalid: "Ongeldige gegevens.", login_fail: "Aanmelden mislukt: ",
+      goal_title: "Vertel Kate wat eraan komt", goal_ph: "Bv. €8.000 voor mijn verbouwing",
+      goal_send: "Vraag Kate", goal_confirm: "Bevestig", goal_cancel: "Annuleer",
+      goal_none: "Kate vond geen bedrag. Probeer bv. '€8.000 voor mijn verbouwing'.",
+      goal_sentence: (p, a, keep) => `Doel: ${p}, ${a}${keep ? ", beschikbaar houden" : ""}`,
+      goal_remove: (x) => `Doel verwijderen: ${x}`, goal_hint: "Kate houdt hiermee rekening. Alleen jij stelt dit in.",
+      gp_renovation: "verbouwing", gp_car: "auto", gp_travel: "reis", gp_education: "studies",
+      gp_emergency_buffer: "noodbuffer", gp_house_purchase: "woning kopen", gp_other: "ander doel",
     },
     en: {
       tagline: "Prototype for the KBC case · Tectonic Hackathon", logout: "Log out",
-      login_title: "Who is opening the app?", login_sub: "Pick a synthetic customer. One demo password for all (printed by run.sh, stored in backend/.env).",
+      login_title: "Who is opening the app?", login_sub: "Pick a fictional customer and open the app the way they see it.",
       persona: "Persona", password: "Demo password", open_app: "Open the app",
-      tab_home: "Home", tab_timeline: "Next 12 months", tab_data: "My data",
-      ai_chip: "AI assistant · Kate", why_title: "Why am I seeing this?", signals: "Signals used",
+      tab_home: "Home", tab_timeline: "Timeline", tab_data: "My data",
+      ai_chip: "AI assistant · Kate", why_title: "Why am I seeing this?", signals: "Logged signals",
       why_correct: "You can correct this: 'Not relevant' lowers this moment's weight, 'Never' switches it off for you. Every decision is logged.",
       side_hint: "Tap Why? on a card to see the exact signals, the rule, the confidence and the legal basis.",
       greet: "Hi", comfort: "digital comfort", loading: "Loading…", load_error: "Could not load: ",
@@ -255,13 +263,20 @@
       c_mkt: "Suggestions about products", c_mkt_h: "Off = only information and protection, no offers (GDPR Art. 21).",
       c_note: "Your feedback on cards (Not now / Not relevant / Never) is also stored and changes what you see.",
       invalid: "Invalid credentials.", login_fail: "Login failed: ",
+      goal_title: "Tell Kate what's coming up", goal_ph: "E.g. €8,000 for my renovation",
+      goal_send: "Ask Kate", goal_confirm: "Confirm", goal_cancel: "Cancel",
+      goal_none: "Kate found no amount. Try e.g. '€8,000 for my renovation'.",
+      goal_sentence: (p, a, keep) => `Goal: ${p}, ${a}${keep ? ", keep available" : ""}`,
+      goal_remove: (x) => `Remove goal: ${x}`, goal_hint: "Kate takes this into account. Only you set this.",
+      gp_renovation: "renovation", gp_car: "car", gp_travel: "travel", gp_education: "education",
+      gp_emergency_buffer: "emergency buffer", gp_house_purchase: "buying a home", gp_other: "other goal",
     },
     fr: {
       tagline: "Prototype pour le cas KBC · Tectonic Hackathon", logout: "Se déconnecter",
-      login_title: "Qui ouvre l'app ?", login_sub: "Choisissez un client fictif. Un mot de passe démo pour tous (affiché par run.sh, stocké dans backend/.env).",
+      login_title: "Qui ouvre l'app ?", login_sub: "Choisissez un client fictif et ouvrez l'app comme il la voit.",
       persona: "Persona", password: "Mot de passe démo", open_app: "Ouvrir l'app",
-      tab_home: "Accueil", tab_timeline: "12 prochains mois", tab_data: "Mes données",
-      ai_chip: "Assistante IA · Kate", why_title: "Pourquoi je vois ceci ?", signals: "Signaux utilisés",
+      tab_home: "Accueil", tab_timeline: "Calendrier", tab_data: "Mes données",
+      ai_chip: "Assistante IA · Kate", why_title: "Pourquoi je vois ceci ?", signals: "Signaux enregistrés",
       why_correct: "Vous pouvez corriger : « Pas pertinent » réduit le poids, « Jamais » le désactive pour vous. Chaque décision est enregistrée.",
       side_hint: "Touchez Pourquoi ? sur une carte pour voir les signaux, la règle, la confiance et la base légale.",
       greet: "Bonjour", comfort: "aisance numérique", loading: "Chargement…", load_error: "Chargement impossible : ",
@@ -287,6 +302,13 @@
       c_mkt: "Suggestions de produits", c_mkt_h: "Désactivé = uniquement information et protection, aucune offre (RGPD art. 21).",
       c_note: "Vos retours sur les cartes (Pas maintenant / Pas pertinent / Jamais) sont aussi enregistrés et changent ce que vous voyez.",
       invalid: "Identifiants invalides.", login_fail: "Connexion impossible : ",
+      goal_title: "Dites à Kate ce qui arrive", goal_ph: "Ex. 8 000 € pour ma rénovation",
+      goal_send: "Demander à Kate", goal_confirm: "Confirmer", goal_cancel: "Annuler",
+      goal_none: "Kate n'a pas trouvé de montant. Essayez p. ex. « 8 000 € pour ma rénovation ».",
+      goal_sentence: (p, a, keep) => `Objectif : ${p}, ${a}${keep ? ", garder disponible" : ""}`,
+      goal_remove: (x) => `Supprimer l'objectif : ${x}`, goal_hint: "Kate en tient compte. Vous seul(e) le définissez.",
+      gp_renovation: "rénovation", gp_car: "voiture", gp_travel: "voyage", gp_education: "études",
+      gp_emergency_buffer: "réserve de secours", gp_house_purchase: "achat d'un logement", gp_other: "autre objectif",
     },
   };
   function loadLang() { try { const v = localStorage.getItem("kate_lang"); return ["nl", "en", "fr"].includes(v) ? v : "nl"; } catch (_) { return "nl"; } }
@@ -343,9 +365,9 @@
     const box = $("personas");
     clear(box);
     PERSONAS.forEach((p) => {
-      const card = el("button", "card text-left p-5 cursor-pointer transition hover:border-sky-400");
+      const card = el("button", "card text-left p-5 cursor-pointer transition hover:border-sky-400 flex flex-col items-start justify-start");
       card.type = "button";
-      const av = el("div", "w-12 h-12 rounded-full brand-mark flex items-center justify-center font-bold text-lg mb-3", p.name.slice(0, 1));
+      const av = el("div", "avatar mb-3", p.name.slice(0, 1));
       av.setAttribute("aria-hidden", "true");
       card.appendChild(av);
       card.appendChild(el("div", "font-bold text-lg", p.name));
@@ -393,7 +415,7 @@
       if (active) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
     });
     $("greeting").textContent = state.profile ? greet(state.profile) : "";
-    $("greeting-sub").textContent = state.profile ? `${cap(state.profile.region)} · ${t("comfort")} ${state.profile.digital_comfort}/5` : "";
+    $("greeting-sub").textContent = new Date(2026, 8, 30).toLocaleDateString(t("locale"), { weekday: "long", day: "numeric", month: "long" });
     hideWhy();
     if (tab === "feed") loadFeed();
     if (tab === "timeline") loadTimeline();
@@ -410,10 +432,83 @@
   async function loadFeed() {
     loading();
     try {
-      const data = await (await api("/me/moments?lang=" + state.lang)).json();
+      const [data, goals] = await Promise.all([
+        api("/me/moments?lang=" + state.lang).then((r) => r.json()),
+        api("/me/goals").then((r) => r.json()).catch(() => ({ goals: [] })),
+      ]);
       state.feed = data;
+      state.goals = goals.goals || [];
       renderFeed(data);
     } catch (err) { errorBox(err); }
+  }
+
+  // ----------------------------------------------- goals: customer-stated intent
+  function goalEur(n) { return "€" + Math.round(Number(n)).toLocaleString(t("locale")); }
+  function goalSentence(g) { return t("goal_sentence", t("gp_" + g.purpose), goalEur(g.amount), g.keep_accessible); }
+  function goalsCard() {
+    const card = el("section", "card p-4 fade");
+    const title = el("h2", "font-semibold text-sm", t("goal_title"));
+    title.id = "goal-title";
+    card.setAttribute("aria-labelledby", "goal-title");
+    card.appendChild(title);
+    const form = el("form", "mt-2 flex gap-2");
+    const input = el("input", "field flex-1 min-w-0");
+    input.type = "text"; input.maxLength = 300; input.placeholder = t("goal_ph");
+    input.setAttribute("aria-label", t("goal_title"));
+    const send = el("button", "btn btn-primary", t("goal_send"));
+    send.type = "submit";
+    form.appendChild(input); form.appendChild(send);
+    card.appendChild(form);
+    const proposal = el("div", "mt-3 text-sm");
+    proposal.setAttribute("aria-live", "polite");
+    card.appendChild(proposal);
+    form.addEventListener("submit", async (ev) => {
+      ev.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      clear(proposal);
+      send.disabled = true;
+      try {
+        const p = (await (await api("/me/goals/parse", { method: "POST", body: JSON.stringify({ text, lang: state.lang }) })).json()).proposal;
+        if (!p) { proposal.appendChild(el("p", "text-slate-600", t("goal_none"))); return; }
+        proposal.appendChild(el("p", "font-medium", goalSentence(p)));
+        const row = el("div", "mt-2 flex gap-2");
+        const ok = el("button", "btn btn-primary", t("goal_confirm"));
+        const no = el("button", "btn btn-secondary", t("goal_cancel"));
+        ok.type = "button"; no.type = "button";
+        ok.addEventListener("click", async () => {
+          ok.disabled = true;
+          try {
+            await api("/me/goals", { method: "POST", body: JSON.stringify({ purpose: p.purpose, amount: p.amount, keep_accessible: p.keep_accessible }) });
+            loadFeed();
+          } catch (err) { ok.disabled = false; alert(t("save_fail") + err.message); }
+        });
+        no.addEventListener("click", () => clear(proposal));
+        row.appendChild(ok); row.appendChild(no);
+        proposal.appendChild(row);
+      } catch (err) { proposal.appendChild(el("p", "text-red-600", t("load_error") + err.message)); }
+      finally { send.disabled = false; }
+    });
+    if (state.goals && state.goals.length) {
+      const list = el("div", "mt-3 flex flex-wrap items-center gap-2");
+      state.goals.forEach((g) => {
+        const label = `${cap(t("gp_" + g.purpose))} · ${goalEur(g.amount)}`;
+        const c = el("span", "chip chip-cal", label);
+        const x = el("button", "btn btn-quiet", "×");
+        x.type = "button";
+        x.setAttribute("aria-label", t("goal_remove", label));
+        x.addEventListener("click", async () => {
+          x.disabled = true;
+          try { await api("/me/goals/" + encodeURIComponent(g.id), { method: "DELETE" }); loadFeed(); }
+          catch (err) { x.disabled = false; alert(t("save_fail") + err.message); }
+        });
+        c.appendChild(x);
+        list.appendChild(c);
+      });
+      card.appendChild(list);
+      card.appendChild(el("p", "mt-2 text-xs text-slate-600", t("goal_hint")));
+    }
+    return card;
   }
 
   function renderFeed(data) {
@@ -427,9 +522,9 @@
       body.appendChild(banner);
     }
     const head = el("div", "flex items-center justify-between text-xs text-slate-600 px-1");
-    head.appendChild(el("span", "", `${t("moments", data.moments.length)} · ${data.today}`));
-    head.appendChild(el("span", "", `${t("narration")}: ${data.narration}`));
+    head.appendChild(el("span", "", t("moments", data.moments.length)));
     body.appendChild(head);
+    body.appendChild(goalsCard());
     if (!data.moments.length) body.appendChild(el("p", "text-sm text-slate-600 py-8 text-center", t("empty")));
     data.moments.forEach((m) => body.appendChild(momentCard(m)));
   }
@@ -531,7 +626,7 @@
      [t("m_stakes"), t("stakes_" + m.stakes)], [t("m_window"), `${m.window[0]} → ${m.window[1]}`], [t("m_channel"), CHANNEL_LABEL[m.channel] || m.channel],
      [t("m_legal"), m.legal_basis], [t("m_human"), m.human_review ? t("yes") : t("no")], [t("m_score"), m.score],
      [t("m_actions"), m.actions.join(", ")]].forEach(([k, v]) => {
-      dl.appendChild(el("dt", "text-slate-600", k)); dl.appendChild(el("dd", "font-medium break-words", v));
+      dl.appendChild(el("dt", "text-slate-600", k)); dl.appendChild(el("dd", "font-medium break-words", String(v ?? "").replaceAll("_", " ")));
     });
   }
   function hideWhy() { $("why-drawer").classList.add("hidden"); $("side-hint").classList.remove("hidden"); }
@@ -645,7 +740,8 @@
       fillTable($("admin-by-channel"), Object.entries(d.moments_by_channel).map(([k, v]) => [CHANNEL_LABEL[k] || k, v]));
       fillTable($("admin-by-source"), Object.entries(d.moments_by_source).map(([k, v]) => [SOURCE_LABEL[k] || k, v]));
       fillTable($("admin-optouts"), [["'Never' feedback", d.opt_outs.never_feedback], ["Marketing off", d.opt_outs.marketing_off],
-        ["Insurance data off", d.opt_outs.insurance_data_off], ["Other banks on", d.opt_outs.other_banks_on]]);
+        ["Insurance data off", d.opt_outs.insurance_data_off], ["Other banks on", d.opt_outs.other_banks_on],
+        ["Customer goals set", d.goals_total ?? 0]]);
       const world = $("admin-world"); clear(world);
       const th = el("tr", "text-left text-slate-600"); ["Rule", "Since", "Affected", "€ impact"].forEach((h) => th.appendChild(el("th", "", h))); world.appendChild(th);
       d.world_rules.forEach((r) => {

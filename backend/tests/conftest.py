@@ -15,6 +15,8 @@ os.environ["DEMO_PASSWORD"] = "test-demo-password"
 os.environ["DEMO_TODAY"] = "2026-09-30"
 os.environ["APP_ENV"] = "test"
 os.environ["LOGIN_RATE_LIMIT"] = "5/minute"
+os.environ["ADMIN_PASSWORD"] = "test-admin-password"
+os.environ["GLOBAL_RATE_LIMIT"] = "10000/minute"
 for key in ("GEMINI_API_KEY", "GOOGLE_API_KEY", "GCP_PROJECT", "ELEVENLABS_API_KEY"):
     os.environ[key] = ""
 os.environ["DECISION_LOG_PATH"] = str(pathlib.Path(tempfile.mkdtemp()) / "decision_log.jsonl")
@@ -45,4 +47,5 @@ def _reset_state():
     yield
     store.feedback.clear()
     store.deliveries.clear()
+    store.goals.clear()
     RULEBOOK.reset()

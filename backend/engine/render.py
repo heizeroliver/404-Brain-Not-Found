@@ -10,7 +10,9 @@ import re
 from datetime import date
 from typing import Any
 
-PLACEHOLDER = re.compile(r"\{([a-z_][a-z0-9_]*)(?::([0-9,.]*f|d))?\}")
+# Spec: optional thousands separator and a 1-digit precision only. No width, so a
+# template such as "{amount:999999999d}" cannot allocate a gigabyte string (DoS).
+PLACEHOLDER = re.compile(r"\{([a-z_][a-z0-9_]{0,40})(?::(,?(?:\.[0-9])?f|,?d))?\}")
 ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 GROUP = {"nl": ".", "fr": " ", "en": ","}
