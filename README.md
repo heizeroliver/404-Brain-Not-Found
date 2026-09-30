@@ -30,16 +30,18 @@ KBC's five questions: which signals help us understand what customers need; how 
 | 4. How can it work across products, services and channels? | One decision layer over banking, savings, investing (Bolero), pension saving and insurance. The engine picks the channel: in-app card, Kate voice note, or advisor call. New products plug in as a rule module or a world rule. | Marc's company car goes to an advisor; Rita gets a callback |
 | 5. How can you create impact for millions at the same time? | A new world rule runs against every customer twin in seconds and reports who is affected and by how much. The same rules run as a nightly batch plus real-time triggers. Frequency caps and feedback keep it helpful, not noisy. | Control room: paste a rule, click Run against all customers |
 
-## Screenshots
+## Screenshots (current UI)
 
 | | |
 |---|---|
-| ![Lien's feed in Dutch](screenshots/lien-feed.png) | ![Why? drawer](screenshots/lien-why.png) |
-| Lien (NL): idle cash above a six-month buffer, with three safe options. | Why?: signals, rule, confidence, legal basis, channel and human review. |
-| ![Lien's next 12 months](screenshots/lien-timeline.png) | ![Marc in French](screenshots/marc-feed-fr.png) |
-| Next 12 months: the life calendar and Belgium's rules on one timeline. | Marc (FR): company-car deductibility 50/25/0%, routed to an advisor. |
-| ![Rita in care mode](screenshots/rita-feed.png) | ![Control room](screenshots/admin-control-room.png) |
-| Rita (NL): a held €900 payment, care mode on, a colleague calls back. | Control room: 203 customers, channels, handoffs, world rules, decision log. |
+| ![Lien overview](screenshots/lien-overview-1440.png) | ![Why panel](screenshots/lien-why-1440.png) |
+| Overview: one priority moment, why now, one action; savings allocation; upcoming. | Why?: plain reasons and dates first, technical evidence behind a disclosure. |
+| ![Goal applied](screenshots/lien-plans-1440.png) | ![Adviser request](screenshots/marc-requested-1440.png) |
+| My plans: "keep €8,000 for my renovation" splits the savings into buffer €12,300, goal €8,000, remaining €5,700. | Marc asks for an adviser: a prototype request (AR-…), no real call is placed. |
+| ![Control room overview](screenshots/control-overview-1440.png) | ![Advisor queue](screenshots/control-queue-1440.png) |
+| Control room: 4 defined metrics, moments by type (click to drill down), recommended channels. | Advisor queue: the customer's request with status requested → in review → resolved. |
+
+Mobile: [overview](screenshots/lien-overview-390.png), [plans](screenshots/lien-plans-390.png). Other tabs: [moments](screenshots/control-moments-1440.png), [rule studio](screenshots/control-rules-1440.png), [trust & audit](screenshots/control-audit-1440.png). The previous UI is kept in `screenshots/before/` and runs at `/legacy.html`.
 
 ## Try it in 2 minutes
 
@@ -53,14 +55,15 @@ cd 404-Brain-Not-Found
 
 `run.sh` creates `.venv`, installs `backend/requirements.lock`, writes `backend/.env` with a generated JWT secret and demo password (printed once, stored as `DEMO_PASSWORD`), then starts the API on :8000 and the app on :5173. Open **http://localhost:5173**, click a persona card, enter the demo password, click **Open de app**.
 
-| Persona | Who | What to click |
-|---|---|---|
-| **Lien**, 29, Leuven | Renter, €26k savings, Bolero ETFs, digital comfort 5/5 | Type "Ik wil €8.000 beschikbaar houden voor mijn verbouwing" in Vertel Kate wat eraan komt, click Vraag Kate, then Bevestig: the idle-cash card drops to €5.700; Waarom? shows the goal; Niet relevant on a card (it disappears); tab Tijdlijn (pension-saving top-up before 31 Dec, holiday pay in May); Beluister for the voice note |
-| **Marc**, 47, Brussels | Diesel company car, daughter Chloé turns 18, home policy +8% | Switch the header to FR first. Company-car card is routed to an advisor (Important); Pourquoi ? shows why; insurance tax 9.6% |
-| **Rita**, 71, Kortrijk | Low digital comfort (1/5), €48k savings | Care mode banner; €900 payment held after a Verification-of-Payee name mismatch, callback plus Guardian Angel offer; energy bills +26%; home policy +7%. The term-account and idle-cash offers are held back by care mode |
-| **Control room** (admin) | KBC view over 203 customers | Moments by type, channel and source; care mode; human handoffs; opt-outs; world rules with affected counts; decision log. Open **Drop in a new rule**, keep the prefilled example, click **Run against all customers** |
+**Demo path (3 minutes):**
+1. Log in as **lien** (NL). Overview shows "Spaargeld dat niets doet" with €13.700 above a modeled six-month buffer. Click **Waarom?**: reasons, dates, source, technical details.
+2. Click **Plan je spaargeld** (My plans). Type `Ik wil €8.000 beschikbaar houden voor mijn verbouwing`, click **Vraag Kate**, then **Bevestig**. The chart shows €12.300 buffer, €8.000 renovation, €5.700 remaining; the overview recommendation updates.
+3. Log out, log in as **marc**. On the company-car moment click **Vraag een adviseur**, confirm. A prototype request id (AR-…) appears.
+4. Log out, log in as **admin**. Control room overview: metrics and charts; click a bar to drill into Moments. Open **Adviseurswachtrij**: Marc's request; click **Start behandeling**, then **Markeer afgehandeld**.
+5. **Regelstudio**: the illustrative template, **Preview impact** (nothing is activated), optionally **Activate**.
+6. Optional: **rita** shows protective treatment (held payment, care mode, no offers).
 
-Tab **Mijn gegevens / My data** toggles consents (insurance data, other banks, marketing) and the feed changes. Tests: `cd backend && ../.venv/bin/pytest -q` (67 tests, fully offline). Manual setup, routes, Gemini and ElevenLabs configuration: [backend/README.md](backend/README.md).
+**Mijn gegevens / My data** toggles consents (insurance data, other banks, marketing) and the feed changes. Tests: `cd backend && ../.venv/bin/pytest -q` (67 tests, fully offline). Manual setup, routes, Gemini and ElevenLabs configuration: [backend/README.md](backend/README.md).
 
 ## Architecture
 
