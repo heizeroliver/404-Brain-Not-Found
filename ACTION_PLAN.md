@@ -178,9 +178,9 @@ Three synthetic personas, deliberately different. Two are enough for the video i
 
 Each moment card shows: the message (persona's language), the confidence, the "Why?" (signals), one primary action ("Let Kate prepare it", never executed without explicit approval, which is KBC's own rule), and controls (Not now / Not relevant / Never).
 
-### 6.6 Fallback concept (only if the team rejects Foresight in the first 10 minutes)
+### 6.6 Alternatives
 
-**"Kate Mandates"**: bounded standing orders in plain language ("keep my current account between €1,500 and €3,000, sweep the rest"; "if any premium rises more than 5%, get me two alternatives"), modelled on AP2-style signed mandates. Smaller scope, still bold. Foresight is stronger because it answers all five KBC questions; Mandates can become Foresight's action layer in the final.
+Two other full concepts (B. Kate Autopilot: mandate-based delegated banking; C. Financial Immune System: protective personalization) are in `CONCEPT_OPTIONS.md`, with a scoring matrix and a 10-minute decision method. Pick one by 19:35 and do not revisit.
 
 ---
 
