@@ -16,6 +16,7 @@ KBC's five questions: which signals help us understand what customers need; how 
 - **Two calendars.** The customer's life calendar (10 life-calendar and protection rules) and Belgium's rulebook (4 world rules: capital-gains tax 2026, insurance tax 9.6%, company-car deductibility 50/25/0%, Flemish renovation obligation within 6 years). World rules are declarative data, so a new government measure is a JSON file, not a code release.
 - **Bank + insurer data.** Transactions, savings, investments, pension saving and insurance contracts in one view. No fintech has that combination.
 - **Glass box.** Every card has a Why? drawer (signals, rule, confidence, legal basis, channel, human review). The customer answers Not now / Not relevant / Never / Helpful, and consents switch whole rule families off. The feed changes immediately.
+- **Intent, stated by the customer.** Lien types "Ik wil €8.000 beschikbaar houden voor mijn verbouwing". Kate turns it into a goal proposal (renovation, €8,000, keep accessible), Lien confirms, and the engine recalculates: the idle-cash suggestion drops from €13,700 to €5,700 and Why? shows "€8,000 reserved for your renovation (your own goal)". The parser is deterministic; an LLM may only propose the parse, never an amount the customer did not type.
 - **The engine chooses the channel, including a human.** High stakes or low digital comfort go to an advisor. A vulnerability guard (care mode) drops every sales message when a customer is under pressure.
 
 ## How the prototype answers KBC's five questions
@@ -23,7 +24,7 @@ KBC's five questions: which signals help us understand what customers need; how 
 | KBC question | How Kate Foresight answers it | Where to see it |
 |---|---|---|
 | 1. What signals help us understand what customers need? | Salary rhythm, holiday pay, year-end bonus, idle savings, Doccle energy invoices (+26%), insurance renewal dates and premiums, life dates (child turns 18, lease end), a payment held by the fraud engine, plus Belgium's rule changes. Feedback is a signal too. | Why? drawer on any card lists the exact signals |
-| 2. How can customers be recognized by situation, behavior and intent? | A digital twin per customer: situation from the two calendars, behavior from transaction patterns and digital comfort (1 to 5), intent from feedback and consents. Care mode recognizes vulnerability (held payment, income drop). | Lien vs Rita: same engine, different treatment |
+| 2. How can customers be recognized by situation, behavior and intent? | A digital twin per customer: situation from the two calendars, behavior from transaction patterns and digital comfort (1 to 5), intent from goals the customer states in plain language, feedback and consents. Care mode recognizes vulnerability (held payment, income drop). | Lien vs Rita: same engine, different treatment |
 | 3. How can experiences adapt automatically? | Arbitration ranks by stakes x urgency x confidence x affinity, applies a frequency cap (1 pushed moment per week unless high stakes), drops sales in care mode, and narrates in NL/EN/FR. Not relevant lowers weight, Never switches a moment off. | Click Not relevant, the card disappears |
 | 4. How can it work across products, services and channels? | One decision layer over banking, savings, investing (Bolero), pension saving and insurance. The engine picks the channel: in-app card, Kate voice note, or advisor call. New products plug in as a rule module or a world rule. | Marc's company car goes to an advisor; Rita gets a callback |
 | 5. How can you create impact for millions at the same time? | A new world rule runs against every customer twin in seconds and reports who is affected and by how much. The same rules run as a nightly batch plus real-time triggers. Frequency caps and feedback keep it helpful, not noisy. | Control room: paste a rule, click Run against all customers |
@@ -53,12 +54,12 @@ cd 404-Brain-Not-Found
 
 | Persona | Who | What to click |
 |---|---|---|
-| **Lien**, 29, Leuven | Renter, €26k savings, Bolero ETFs, digital comfort 5/5 | Waarom? on the idle-cash card; Niet relevant on a card (it disappears); tab Komende 12 maanden (pension-saving top-up before 31 Dec, holiday pay in May); Beluister for the voice note |
+| **Lien**, 29, Leuven | Renter, €26k savings, Bolero ETFs, digital comfort 5/5 | Type "Ik wil €8.000 beschikbaar houden voor mijn verbouwing" in Vertel Kate wat eraan komt, click Vraag Kate, then Bevestig: the idle-cash card drops to €5.700; Waarom? shows the goal; Niet relevant on a card (it disappears); tab Tijdlijn (pension-saving top-up before 31 Dec, holiday pay in May); Beluister for the voice note |
 | **Marc**, 47, Brussels | Diesel company car, daughter Chloé turns 18, home policy +8% | Switch the header to FR first. Company-car card is routed to an advisor (Important); Pourquoi ? shows why; insurance tax 9.6% |
 | **Rita**, 71, Kortrijk | Low digital comfort (1/5), €48k savings | Care mode banner; €900 payment held after a Verification-of-Payee name mismatch, callback plus Guardian Angel offer; energy bills +26%; home policy +7%. The term-account and idle-cash offers are held back by care mode |
 | **Control room** (admin) | KBC view over 203 customers | Moments by type, channel and source; care mode; human handoffs; opt-outs; world rules with affected counts; decision log. Open **Drop in a new rule**, keep the prefilled example, click **Run against all customers** |
 
-Tab **Mijn gegevens / My data** toggles consents (insurance data, other banks, marketing) and the feed changes. Tests: `cd backend && ../.venv/bin/pytest -q` (51 tests, fully offline). Manual setup, routes, Gemini and ElevenLabs configuration: [backend/README.md](backend/README.md).
+Tab **Mijn gegevens / My data** toggles consents (insurance data, other banks, marketing) and the feed changes. Tests: `cd backend && ../.venv/bin/pytest -q` (64 tests, fully offline). Manual setup, routes, Gemini and ElevenLabs configuration: [backend/README.md](backend/README.md).
 
 ## Architecture
 
@@ -81,6 +82,8 @@ Tab **Mijn gegevens / My data** toggles consents (insurance data, other banks, m
 
 ### How this scales to 2.3M customers
 
+**Measured:** the full daily pass (all rules + arbitration) for 10,000 synthetic customers takes 1.3 s on one process (4 vCPU container), 0.13 ms per customer. Extrapolated, 2.3M customers is about 5 minutes on one process. Command and table: [docs/BENCHMARK.md](docs/BENCHMARK.md).
+
 - **Nightly batch in BigQuery.** Rules read a flat customer twin; world rules are conditions over twin fields, so they compile to SQL over 2.3M rows. The control room's "affected N customers in seconds" is the same operation at demo size.
 - **Real-time triggers via Pub/Sub.** Salary lands, an invoice arrives, a payment is held: the event re-evaluates only that customer's rules and arbitration on Cloud Run. Arbitration is per customer and stateless, so it scales horizontally.
 - **LLM only for phrasing.** Numbers, eligibility and channel come from the engine. The LLM (Gemini, pluggable) may rephrase; the output is validated (every number must already be in the evidence) and falls back to templates.
@@ -98,6 +101,8 @@ Aikido scan results before and after our fixes:
 - **Roles**: `/admin/*` requires the admin role; customer routes reject admin tokens; admin responses are aggregates with ids only.
 - **Input validation**: pydantic models with `extra="forbid"` on every input; feedback is an enum; world rules are declarative data, never code; templates substitute only whitelisted placeholders.
 - **Auth hygiene**: PBKDF2-hashed demo password, constant-time compare, identical 401 for unknown user and wrong password, JWT with `exp` and `iss` checks.
+- **Separate admin password**: customers can never log in as admin with the shared demo password; production refuses to start without it.
+- **Abuse limits**: 64 KB request bodies, a global rate limit, capped rule schemas and template format specs, capped feedback and goals per customer.
 - **Rate limits** on `/login` (5/min) and voice (10/min). Strict CORS to the frontend origin. Security headers (CSP `default-src 'none'`, nosniff, frame DENY, no-referrer, no-store). No `/docs` or OpenAPI exposed. Generic error bodies.
 - **Secrets** only in git-ignored `backend/.env`; full pinned lockfile `backend/requirements.lock`. No `eval`, no SQL, no shell.
 
@@ -111,12 +116,13 @@ Aikido scan results before and after our fixes:
 
 ## What is unfinished
 
-- **Live Gemini narration** is built and pluggable (`GEMINI_API_KEY` or Vertex) but was blocked on the hackathon's Google Cloud lab project by org policy. The demo runs on deterministic NL/EN/FR templates ("tekst: template" on screen).
+- **Live Gemini narration** is built and pluggable (`GEMINI_API_KEY` or Vertex) but was blocked on the hackathon's Google Cloud lab project by org policy. The organisers confirmed Gemini is not available on the hackathon projects. The demo runs on deterministic NL/EN/FR templates; in production the language layer would use KBC's own model and only phrase text.
 - **Real-time streaming (Pub/Sub) and the 2.3M BigQuery batch** are designed, not built. The demo evaluates 203 customers in memory.
 - **Voice notes** need `ELEVENLABS_API_KEY` and voice ids in `backend/.env`; without them the Listen button shows a notice with the line Kate would say.
 - **Data is synthetic.** No real customer is represented. Belgian figures come from public sources; the example rule in the control room is marked illustrative.
 - **Admin UI is English only**; the customer app is NL/EN/FR. Evidence strings in Why? are English (audit language).
-- **State is in memory**: feedback, consents and added rules reset on restart. No advisor cockpit yet.
+- **State is in memory**: feedback, consents, goals and added rules reset on restart. No advisor cockpit yet.
+- **Cloud Run** deploy is scripted (`scripts/deploy_cloud_run.sh`, europe-west1); the demo video runs locally.
 
 ## Repo map
 
@@ -124,6 +130,9 @@ Aikido scan results before and after our fixes:
 README.md                 this file
 SUBMISSION.md             Builderbase description, video script, checklist, jury Q&A
 run.sh                    one-command start (venv, .env, API :8000, app :5173)
+Dockerfile                one container: API + app under /app (Cloud Run)
+scripts/deploy_cloud_run.sh  deploy from Cloud Shell, secrets generated at deploy time
+docs/BENCHMARK.md         measured engine throughput
 ACTION_PLAN.md            plan, research notes and sources
 CONCEPT_OPTIONS.md        the four concepts we weighed
 screenshots/              UI screenshots (and Aikido before/after at submission)
@@ -141,8 +150,11 @@ backend/
   engine/arbitrate.py     scoring, vulnerability guard, frequency cap, channel choice
   engine/narrate.py       templates + optional Gemini with validation
   engine/voice.py         ElevenLabs voice with AI disclosure
+  engine/intent.py        goal parser (NL/EN/FR), optional LLM, validated
+  goals_api.py            /me/goals routes (token-scoped)
+  scripts/benchmark.py    throughput benchmark
   data/generate.py        seeded synthetic dataset (203 customers)
-  tests/                  51 pytest tests: security, rules, arbitration, language
+  tests/                  64 pytest tests: security, rules, arbitration, language, goals
   requirements.lock       pinned dependencies
 ```
 

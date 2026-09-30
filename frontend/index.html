@@ -65,6 +65,9 @@
   table td, table th { padding: .4rem .5rem; text-align: left; }
   table tr + tr td { border-top: 1px solid var(--line); }
   .tile-num { font-variant-numeric: tabular-nums; }
+  .hidden { display: none !important; }
+  .avatar { width: 44px; height: 44px; border-radius: 9999px; background: var(--kbc-blue-soft); color: var(--kbc-navy);
+            display: flex; align-items: center; justify-content: center; font-weight: 700; }
   .lang-btn { min-width: 44px; min-height: 36px; border-radius: 9px; font-weight: 700; font-size: 13px; color: #CFEFFC; cursor: pointer; }
   .lang-btn[aria-pressed="true"] { background: #fff; color: var(--kbc-navy); }
 </style>
@@ -192,10 +195,10 @@
   const I18N = {
     nl: {
       tagline: "Prototype voor de KBC-case · Tectonic Hackathon", logout: "Afmelden",
-      login_title: "Wie opent de app?", login_sub: "Kies een fictieve klant. Eén demowachtwoord voor iedereen (getoond door run.sh, bewaard in backend/.env).",
+      login_title: "Wie opent de app?", login_sub: "Kies een fictieve klant en open de app zoals die klant hem ziet.",
       persona: "Persona", password: "Demowachtwoord", open_app: "Open de app",
-      tab_home: "Home", tab_timeline: "Komende 12 maanden", tab_data: "Mijn gegevens",
-      ai_chip: "AI-assistent · Kate", why_title: "Waarom zie ik dit?", signals: "Gebruikte signalen",
+      tab_home: "Home", tab_timeline: "Tijdlijn", tab_data: "Mijn gegevens",
+      ai_chip: "AI-assistent · Kate", why_title: "Waarom zie ik dit?", signals: "Gelogde signalen",
       why_correct: "Je kan dit bijsturen: 'Niet relevant' verlaagt het gewicht, 'Nooit' zet het voor jou uit. Elke beslissing wordt gelogd.",
       side_hint: "Tik op Waarom? bij een kaart om de signalen, de regel, de zekerheid en de rechtsgrond te zien.",
       greet: "Dag", comfort: "digitaal comfort", loading: "Laden…", load_error: "Kon niet laden: ",
@@ -221,7 +224,7 @@
       c_mkt: "Voorstellen over producten", c_mkt_h: "Uit = alleen informatie en bescherming, geen aanbiedingen (AVG art. 21).",
       c_note: "Je feedback op kaarten (Niet nu / Niet relevant / Nooit) wordt ook bewaard en verandert wat je ziet.",
       invalid: "Ongeldige gegevens.", login_fail: "Aanmelden mislukt: ",
-      goal_title: "Vertel Kate wat eraan komt", goal_ph: "Bv. Ik wil €8.000 beschikbaar houden voor mijn verbouwing",
+      goal_title: "Vertel Kate wat eraan komt", goal_ph: "Bv. €8.000 voor mijn verbouwing",
       goal_send: "Vraag Kate", goal_confirm: "Bevestig", goal_cancel: "Annuleer",
       goal_none: "Kate vond geen bedrag. Probeer bv. '€8.000 voor mijn verbouwing'.",
       goal_sentence: (p, a, keep) => `Doel: ${p}, ${a}${keep ? ", beschikbaar houden" : ""}`,
@@ -231,10 +234,10 @@
     },
     en: {
       tagline: "Prototype for the KBC case · Tectonic Hackathon", logout: "Log out",
-      login_title: "Who is opening the app?", login_sub: "Pick a synthetic customer. One demo password for all (printed by run.sh, stored in backend/.env).",
+      login_title: "Who is opening the app?", login_sub: "Pick a fictional customer and open the app the way they see it.",
       persona: "Persona", password: "Demo password", open_app: "Open the app",
-      tab_home: "Home", tab_timeline: "Next 12 months", tab_data: "My data",
-      ai_chip: "AI assistant · Kate", why_title: "Why am I seeing this?", signals: "Signals used",
+      tab_home: "Home", tab_timeline: "Timeline", tab_data: "My data",
+      ai_chip: "AI assistant · Kate", why_title: "Why am I seeing this?", signals: "Logged signals",
       why_correct: "You can correct this: 'Not relevant' lowers this moment's weight, 'Never' switches it off for you. Every decision is logged.",
       side_hint: "Tap Why? on a card to see the exact signals, the rule, the confidence and the legal basis.",
       greet: "Hi", comfort: "digital comfort", loading: "Loading…", load_error: "Could not load: ",
@@ -260,7 +263,7 @@
       c_mkt: "Suggestions about products", c_mkt_h: "Off = only information and protection, no offers (GDPR Art. 21).",
       c_note: "Your feedback on cards (Not now / Not relevant / Never) is also stored and changes what you see.",
       invalid: "Invalid credentials.", login_fail: "Login failed: ",
-      goal_title: "Tell Kate what's coming up", goal_ph: "E.g. I need to keep €8,000 available for my renovation",
+      goal_title: "Tell Kate what's coming up", goal_ph: "E.g. €8,000 for my renovation",
       goal_send: "Ask Kate", goal_confirm: "Confirm", goal_cancel: "Cancel",
       goal_none: "Kate found no amount. Try e.g. '€8,000 for my renovation'.",
       goal_sentence: (p, a, keep) => `Goal: ${p}, ${a}${keep ? ", keep available" : ""}`,
@@ -270,10 +273,10 @@
     },
     fr: {
       tagline: "Prototype pour le cas KBC · Tectonic Hackathon", logout: "Se déconnecter",
-      login_title: "Qui ouvre l'app ?", login_sub: "Choisissez un client fictif. Un mot de passe démo pour tous (affiché par run.sh, stocké dans backend/.env).",
+      login_title: "Qui ouvre l'app ?", login_sub: "Choisissez un client fictif et ouvrez l'app comme il la voit.",
       persona: "Persona", password: "Mot de passe démo", open_app: "Ouvrir l'app",
-      tab_home: "Accueil", tab_timeline: "12 prochains mois", tab_data: "Mes données",
-      ai_chip: "Assistante IA · Kate", why_title: "Pourquoi je vois ceci ?", signals: "Signaux utilisés",
+      tab_home: "Accueil", tab_timeline: "Calendrier", tab_data: "Mes données",
+      ai_chip: "Assistante IA · Kate", why_title: "Pourquoi je vois ceci ?", signals: "Signaux enregistrés",
       why_correct: "Vous pouvez corriger : « Pas pertinent » réduit le poids, « Jamais » le désactive pour vous. Chaque décision est enregistrée.",
       side_hint: "Touchez Pourquoi ? sur une carte pour voir les signaux, la règle, la confiance et la base légale.",
       greet: "Bonjour", comfort: "aisance numérique", loading: "Chargement…", load_error: "Chargement impossible : ",
@@ -299,7 +302,7 @@
       c_mkt: "Suggestions de produits", c_mkt_h: "Désactivé = uniquement information et protection, aucune offre (RGPD art. 21).",
       c_note: "Vos retours sur les cartes (Pas maintenant / Pas pertinent / Jamais) sont aussi enregistrés et changent ce que vous voyez.",
       invalid: "Identifiants invalides.", login_fail: "Connexion impossible : ",
-      goal_title: "Dites à Kate ce qui arrive", goal_ph: "Ex. Je dois garder 8 000 € disponibles pour ma rénovation",
+      goal_title: "Dites à Kate ce qui arrive", goal_ph: "Ex. 8 000 € pour ma rénovation",
       goal_send: "Demander à Kate", goal_confirm: "Confirmer", goal_cancel: "Annuler",
       goal_none: "Kate n'a pas trouvé de montant. Essayez p. ex. « 8 000 € pour ma rénovation ».",
       goal_sentence: (p, a, keep) => `Objectif : ${p}, ${a}${keep ? ", garder disponible" : ""}`,
@@ -362,9 +365,9 @@
     const box = $("personas");
     clear(box);
     PERSONAS.forEach((p) => {
-      const card = el("button", "card text-left p-5 cursor-pointer transition hover:border-sky-400");
+      const card = el("button", "card text-left p-5 cursor-pointer transition hover:border-sky-400 flex flex-col items-start justify-start");
       card.type = "button";
-      const av = el("div", "w-12 h-12 rounded-full brand-mark flex items-center justify-center font-bold text-lg mb-3", p.name.slice(0, 1));
+      const av = el("div", "avatar mb-3", p.name.slice(0, 1));
       av.setAttribute("aria-hidden", "true");
       card.appendChild(av);
       card.appendChild(el("div", "font-bold text-lg", p.name));
@@ -412,7 +415,7 @@
       if (active) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
     });
     $("greeting").textContent = state.profile ? greet(state.profile) : "";
-    $("greeting-sub").textContent = state.profile ? `${cap(state.profile.region)} · ${t("comfort")} ${state.profile.digital_comfort}/5` : "";
+    $("greeting-sub").textContent = new Date(2026, 8, 30).toLocaleDateString(t("locale"), { weekday: "long", day: "numeric", month: "long" });
     hideWhy();
     if (tab === "feed") loadFeed();
     if (tab === "timeline") loadTimeline();
@@ -519,8 +522,7 @@
       body.appendChild(banner);
     }
     const head = el("div", "flex items-center justify-between text-xs text-slate-600 px-1");
-    head.appendChild(el("span", "", `${t("moments", data.moments.length)} · ${data.today}`));
-    head.appendChild(el("span", "", `${t("narration")}: ${data.narration}`));
+    head.appendChild(el("span", "", t("moments", data.moments.length)));
     body.appendChild(head);
     body.appendChild(goalsCard());
     if (!data.moments.length) body.appendChild(el("p", "text-sm text-slate-600 py-8 text-center", t("empty")));
@@ -624,7 +626,7 @@
      [t("m_stakes"), t("stakes_" + m.stakes)], [t("m_window"), `${m.window[0]} → ${m.window[1]}`], [t("m_channel"), CHANNEL_LABEL[m.channel] || m.channel],
      [t("m_legal"), m.legal_basis], [t("m_human"), m.human_review ? t("yes") : t("no")], [t("m_score"), m.score],
      [t("m_actions"), m.actions.join(", ")]].forEach(([k, v]) => {
-      dl.appendChild(el("dt", "text-slate-600", k)); dl.appendChild(el("dd", "font-medium break-words", v));
+      dl.appendChild(el("dt", "text-slate-600", k)); dl.appendChild(el("dd", "font-medium break-words", String(v ?? "").replaceAll("_", " ")));
     });
   }
   function hideWhy() { $("why-drawer").classList.add("hidden"); $("side-hint").classList.remove("hidden"); }
