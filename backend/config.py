@@ -77,6 +77,8 @@ FRONTEND_DIR = _env("FRONTEND_DIR")
 CUSTOMERS_PATH = Path(_env("CUSTOMERS_PATH", str(BASE_DIR / "data" / "customers.json")))
 DECISION_LOG_PATH = Path(_env("DECISION_LOG_PATH", str(BASE_DIR / "data" / "decision_log.jsonl")))
 LOGIN_RATE_LIMIT = _env("LOGIN_RATE_LIMIT", "5/minute")
+# One-click persona login for local demo recordings only. Never active in production.
+DEMO_QUICK_LOGIN = (_env("DEMO_QUICK_LOGIN", "0") or "0") == "1" and APP_ENV != "production"
 VOICE_RATE_LIMIT = _env("VOICE_RATE_LIMIT", "10/minute")
 GLOBAL_RATE_LIMIT = _env("GLOBAL_RATE_LIMIT", "120/minute")  # per client IP, every route
 MAX_BODY_BYTES = 64 * 1024  # request bodies above this are refused with 413

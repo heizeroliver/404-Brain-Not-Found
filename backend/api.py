@@ -252,6 +252,35 @@ def health() -> dict[str, Any]:
     return {"status": "ok" if store.customers else "no_data"}  # no configuration or secrets here
 
 
+class QuickLoginRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    customer_id: Literal["lien", "marc", "rita", "admin"]
+
+
+@app.get("/demo/quick-login")
+def quick_login_status() -> dict[str, bool]:
+    return {"enabled": config.DEMO_QUICK_LOGIN}
+
+
+@app.post("/demo/quick-login", response_model=LoginResponse)
+@limiter.limit(config.LOGIN_RATE_LIMIT)
+def quick_login(request: Request, body: QuickLoginRequest) -> LoginResponse:
+    """Local demo only (DEMO_QUICK_LOGIN=1, never in production): log in as a showcase persona."""
+    if not config.DEMO_QUICK_LOGIN:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
+    if body.customer_id == "admin":
+        role: auth.Role = "admin"
+        profile: dict[str, Any] = {"id": "admin", "name": "KBC control room", "role": "admin"}
+    else:
+        customer = store.get_customer(body.customer_id)
+        if customer is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Not found")
+        role, profile = "customer", customer.public_profile()
+    token = auth.create_token(body.customer_id, role)
+    return LoginResponse(access_token=token, role=role, expires_in=config.JWT_TTL_HOURS * 3600, profile=profile)
+
+
 @app.post("/login", response_model=LoginResponse)
 @limiter.limit(config.LOGIN_RATE_LIMIT)
 def login(request: Request, body: LoginRequest) -> LoginResponse:
