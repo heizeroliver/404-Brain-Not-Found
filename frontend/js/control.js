@@ -256,7 +256,7 @@ function viewMoments(panel, params) {
   si.addEventListener('change', () => { if (si.value.trim() !== f.q) update({ q: si.value.trim() }); });
   const [tf, ts] = select(t('c_f_type'), 'type', f.type, Object.keys(strings.en).filter((k) => k.startsWith('c_type_')).map((k) => [k.slice(7), typeLabel(k.slice(7))]));
   const [srf, srs] = select(t('c_f_source'), 'source', f.source, ['life_calendar', 'world_rule', 'protection'].map((k) => [k, srcLabel(k)]));
-  const [cf, cs] = select(t('c_f_channel'), 'channel', f.channel, ['app', 'push', 'email', 'advisor', 'inbox'].map((k) => [k, chLabel(k)]));
+  const [cf, cs] = select(t('c_f_channel'), 'channel', f.channel, ['in_app_card', 'push', 'voice', 'advisor', 'letter'].map((k) => [k, chLabel(k)]));
   const [stf, sts] = select(t('c_f_status'), 'status', f.status, ['shown', 'queued', 'suppressed'].map((k) => [k, stLabel(k)]));
   ts.addEventListener('change', () => update({ type: ts.value }));
   srs.addEventListener('change', () => update({ source: srs.value }));
@@ -363,6 +363,13 @@ function parseValue(s, op) {
 }
 function showValue(v) { return v == null ? '' : Array.isArray(v) ? v.join(',') : String(v); }
 
+function visibleFrom(eff) {
+  const d = new Date(eff + 'T00:00:00Z');
+  if (isNaN(d)) return eff;
+  d.setUTCDate(d.getUTCDate() - 90);
+  return d.toISOString().slice(0, 10);
+}
+
 function viewRules(panel) {
   const slot = h('div', 'stack-4');
   panel.appendChild(slot);
@@ -466,7 +473,7 @@ function drawRules(slot) {
       const c = card(null);
       add(c, h('p', 'tag tag-info', t('c_preview_only')), h('p', 'metric-value num', t('c_affected', num(d.affected), num(d.total))));
       if (d.total_impact != null) c.appendChild(h('p', 'num', t('c_total_impact') + ': ' + (typeof d.total_impact === 'number' ? fmtEur(d.total_impact) : str(d.total_impact))));
-      if (d.visible_today === false) c.appendChild(h('p', 'muted', t('c_not_visible_today', safeDate(rule.visible_from || rule.effective_date, 'long'))));
+      if (d.visible_today === false) c.appendChild(h('p', 'muted', t('c_not_visible_today', safeDate(rule.visible_from || visibleFrom(rule.effective_date), 'long'))));
       if (d.changes_summary) {
         c.appendChild(h('h3', 'label', t('c_changes')));
         c.appendChild(typeof d.changes_summary === 'object' ? kvTable(d.changes_summary) : h('p', '', String(d.changes_summary)));
@@ -524,7 +531,7 @@ function viewAudit(panel, params) {
     const update = (patch) => go('audit', { ...f, ...patch, page: patch.page || 1 });
     si.addEventListener('keydown', (e) => { if (e.key === 'Enter') update({ q: si.value.trim() }); });
     si.addEventListener('change', () => { if (si.value.trim() !== f.q) update({ q: si.value.trim() }); });
-    const decisions = [...new Set(items.map((i) => i.decision).filter(Boolean).concat(f.decision ? [f.decision] : []).concat(d.decisions || []))];
+    const decisions = [...new Set(items.map((i) => i.decision).filter(Boolean).concat(f.decision ? [f.decision] : []).concat(d.decisions || ['ranked', 'dropped']))];
     const [df, ds] = select(t('c_decision'), 'decision', f.decision, decisions.map((x) => [x, String(x).replace(/_/g, ' ')]));
     ds.addEventListener('change', () => update({ decision: ds.value }));
     add(bar, sf, df);

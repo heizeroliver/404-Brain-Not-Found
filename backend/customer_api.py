@@ -139,6 +139,16 @@ def _title(moment: Moment, lang: str, message: str = "") -> str:
     return first[:120] if first else moment.type.replace("_", " ")
 
 
+def _card_date(m) -> str:
+    """The one date the card shows: a world rule's effective date, otherwise the window end."""
+    if m.source == "world_rule":
+        from engine.rules.rulebook import RULEBOOK
+        rule = RULEBOOK.get(m.type)
+        if rule is not None:
+            return rule.effective_date.isoformat()
+    return m.window[1].isoformat()
+
+
 def _kind(moment: Moment) -> str:
     if moment.source == "world_rule":
         return "effective_date"
@@ -227,6 +237,7 @@ def _moment_out(rm: Any, customer: Customer, lang: str, requests: list[dict]) ->
         "delivery": rm.delivery,
         "window": [m.window[0].isoformat(), m.window[1].isoformat()],
         "date_label_kind": kind,
+        "key_date": _card_date(m),
         "confidence": m.confidence,
         "human_review_required": bool(m.human_review),
         "legal_basis_label": _legal_label(m.legal_basis, lang),

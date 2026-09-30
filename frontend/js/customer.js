@@ -102,8 +102,9 @@ function allocationSection(a) {
 
 // ------------------------------------------------------------------ moments
 function keyDateLine(m) {
-  if (!m.date_label_kind || !m.window || !m.window[1]) return null;
-  return h("p", "num", null, [el("strong", "", t("dl_" + m.date_label_kind) + ": "), document.createTextNode(fmtDate(m.window[1]))]);
+  const d = m.key_date || (m.window && m.window[1]);
+  if (!m.date_label_kind || !d) return null;
+  return h("p", "num", null, [el("strong", "", t("dl_" + m.date_label_kind) + ": "), document.createTextNode(fmtDate(d))]);
 }
 
 function requestedLabel(req) { return t("ar_done", req.id); }
