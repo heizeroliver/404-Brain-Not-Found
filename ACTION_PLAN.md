@@ -1,3 +1,59 @@
+# FINAL RUN SHEET (decided 19:55): Option A, Kate Foresight
+
+**Read this block first. Everything below it is background.**
+
+## The pitch in one breath
+KBC already reacts to what customers *did* (Kate: 140+ situations). Kate Foresight anticipates what is *about to happen* to each of 2.3 million customers, using two calendars KBC alone holds: the customer's own (payroll rhythm, contract renewals, birthdays, leases) and Belgium's (tax deadlines, new rules like the 2026 capital-gains tax). It picks the right moment, the right channel (card, Kate voice, or a human advisor), shows why, and lets the customer correct it. One decision layer, every product and channel plugs in.
+
+**Four reasons it wins, say them in this order:** anticipation instead of reaction; bank + insurer data no fintech has; glass box (Why? + customer control); the engine chooses when a human must step in (digital first, human touch).
+
+The world-rule engine (capital-gains tax, insurance tax, company cars, renovation duty) stays in: it is "Belgium's calendar", the second half of Foresight. Do not present it as a separate idea.
+
+## What already works (verified 19:50)
+- `./run.sh` starts API + app. Personas lien / marc / rita / admin, one demo password printed once.
+- Lien (NL): idle cash, capital-gains tax impact, first-home readiness; timeline has pension top-up (Nov) and holiday pay (May).
+- Marc (FR): company-car deductibility routed to an **advisor**, daughter turns 18, home insurance +8%, insurance tax.
+- Rita (NL, low digital comfort): everything routed to a **human**; home policy +7%, idle cash.
+- Why? drawer, Not now / Not relevant / Never feedback, consents that switch moments off, control room over 203 customers, live rule ingestion ("paste a new rule, see who is affected").
+- 47 automated tests, JWT auth with object-level checks, security headers. Narration from templates (Gemini is blocked on the lab project; the layer is pluggable).
+
+## Who does what until 21:45 code freeze
+| Person | Now to 20:15 | 20:15 to 21:30 |
+|---|---|---|
+| **D: Security & submission** | Merge PR #1 is done by Claude. In Aikido: **Start Scan** on `main`, then **AI Code Analysis** → run the audit. Screenshot = "before". Send findings to Claude. | Paste findings to Claude as they come; write the Builderbase description (section 10); check the repo is public. |
+| **B: Frontend** | `git pull`, `./run.sh`, click every screen for all 3 personas + admin. List what looks broken or ugly, send to Claude. | Polish: KBC-blue header, persona photos/initials, readable cards, timeline view. Keep `textContent` only (no `innerHTML`). |
+| **C: AI & Voice** | ElevenLabs key + one NL (Flemish if possible) and one FR voice id into `backend/.env`. Test the voice button for Lien and Marc. | If someone has a personal AI Studio key: put `GEMINI_API_KEY` in `.env` and check narration still reads well. Otherwise skip. Help D with the video. |
+| **A: Pitch lead** | Rewrite the video script (section 10) around the demo below. Decide who speaks. | Rehearse the click path twice with a timer (< 3:00). Prepare the recording setup (screen + mic). |
+| **Claude** | Merge, lockfile, Rita's extra moments (term-account maturity, energy bill spike, phishing protection with Guardian Angel). | Fix every Aikido finding; fix UI bugs you report; final README. |
+
+## The demo path (what the video shows, 3:00 max)
+1. **0:00 Hook** (voice over a title card): Belgian money life runs on a calendar; banks react, we anticipate.
+2. **0:20 Lien**: feed → "Why?" → Not relevant on one card (it disappears, the customer trains the engine) → timeline: holiday pay in May, pension top-up before 31 Dec → Kate voice note in Dutch.
+3. **1:10 Marc (French)**: home insurance +8% with two options; company-car moment goes to an advisor ("high stakes, human touch").
+4. **1:40 Rita**: everything via a human; the phishing-protection moment (Guardian Angel) and the maturing term account.
+5. **2:00 Control room**: 203 customers, moments by channel, care mode, human handoffs; paste a new government rule → "affects N customers" in seconds. Say: nightly batch + real-time triggers, runs for 2.3M.
+6. **2:35 Close**: bank + insurer only, explainable by design (AI Act, GDPR), Kate becomes proactive on housing, mobility and energy, as KBC itself announced.
+
+## Final test at 21:30 (everyone, 15 minutes, on the demo laptop)
+- [ ] Fresh `git pull` + `./run.sh` works from zero.
+- [ ] Lien, Marc, Rita, admin all log in; wrong password is refused.
+- [ ] Every card has a message, a Why?, and working buttons; French for Marc.
+- [ ] Not relevant removes a card; consents toggle removes insurance moments.
+- [ ] Timeline shows future moments for Lien.
+- [ ] Voice plays for Lien (NL) and Marc (FR), or the button is hidden if no key.
+- [ ] Control room loads; pasting the example rule shows affected customers.
+- [ ] `cd backend && pytest -q` all green.
+- [ ] Aikido latest scan: no open high/critical issues.
+If anything fails: tell Claude the exact screen and message, fix before 21:45. After 21:45 only fixes for things that break the recording.
+
+## After the freeze
+- 21:45–22:15 record and upload the video (YouTube unlisted), link checked in incognito.
+- 22:15 final README check (run steps, architecture, "what is unfinished": live Gemini, real-time streaming, 2.3M batch).
+- 22:30 final Aikido scan → "after" screenshot.
+- 22:45 submit on Builderbase: video link, description, repo link, both Aikido screenshots. Nobody pushes after.
+
+---
+
 # 404 Brain Not Found — KBC case action plan (Tectonic Hackathon, first round)
 
 **The clock.** First round is tonight, 30 Sep 2026, 18:00–23:00, in all 7 cities at once (700+ builders). The top 32 teams go to the grand final on 20 Oct in Ghent (full day, the day before the Tectonic conference). €10,000 for the winner. Tonight's job is *not* to win the hackathon. It is to be unmistakably top-32 material: one sharp idea, one working demo, one clean sub-3-minute video, Aikido done.

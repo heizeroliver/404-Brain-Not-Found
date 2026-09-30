@@ -8,7 +8,7 @@ if [ ! -d .venv ]; then
   echo "Creating virtualenv..."
   "$PY" -m venv .venv
 fi
-.venv/bin/pip install -q -r backend/requirements.txt
+.venv/bin/pip install -q -r backend/requirements.lock
 
 if [ ! -f backend/.env ]; then
   echo "Creating backend/.env from .env.example with generated secrets..."
