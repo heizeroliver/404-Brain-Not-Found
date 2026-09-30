@@ -12,9 +12,9 @@ KBC's five questions: which signals help us understand what customers need; how 
 
 ## Our answer: Kate Foresight
 
-- **Anticipation, not reaction.** Kate today reacts to what a customer did. Foresight looks at what is about to happen: a pension-saving top-up before 31 December, holiday pay in May, a home policy renewing at +8%, a fossil company car losing its tax deductibility.
+- **Explicit anticipation.** Kate already sends proactive suggestions in many situations. Foresight adds an explicit, calendar-based layer that looks at what is about to happen and explains why now: a pension-saving top-up before 31 December, holiday pay in May, a home policy renewing at +8%, a fossil company car losing its tax deductibility.
 - **Two calendars.** The customer's life calendar (10 life-calendar and protection rules) and Belgium's rulebook (4 world rules: capital-gains tax 2026, insurance tax 9.6%, company-car deductibility 50/25/0%, Flemish renovation obligation within 6 years). World rules are declarative data, so a new government measure is a JSON file, not a code release.
-- **Bank + insurer data.** Transactions, savings, investments, pension saving and insurance contracts in one view. No fintech has that combination.
+- **Bank + insurer data.** Transactions, savings, investments, pension saving and insurance contracts in one view: a combination a bank-insurer holds and most pure payment apps do not.
 - **Glass box.** Every card has a Why? drawer (signals, rule, confidence, legal basis, channel, human review). The customer answers Not now / Not relevant / Never / Helpful, and consents switch whole rule families off. The feed changes immediately.
 - **Intent, stated by the customer.** Lien types "Ik wil €8.000 beschikbaar houden voor mijn verbouwing". Kate turns it into a goal proposal (renovation, €8,000, keep accessible), Lien confirms, and the engine recalculates: the idle-cash suggestion drops from €13,700 to €5,700 and Why? shows "€8,000 reserved for your renovation (your own goal)". The parser is deterministic; an LLM may only propose the parse, never an amount the customer did not type.
 - **Talk to Kate (voice).** A Siri-style voice conversation (ElevenLabs agent) that only knows the moments the engine computed for this customer, so it cannot invent numbers. Setup: [docs/ELEVENLABS_AGENT.md](docs/ELEVENLABS_AGENT.md).
@@ -83,14 +83,15 @@ Tab **Mijn gegevens / My data** toggles consents (insurance data, other banks, m
 
 ### How this scales to 2.3M customers
 
-**Measured:** the full daily pass (all rules + arbitration) for 10,000 synthetic customers takes 1.3 s on one process (4 vCPU container), 0.13 ms per customer. Extrapolated, 2.3M customers is about 5 minutes on one process. Command and table: [docs/BENCHMARK.md](docs/BENCHMARK.md).
+**Measured:** rules + arbitration for 10,000 synthetic customers took 1.3 s on one process (4 vCPU container). This excludes data loading and validation, durable writes, network delivery and LLM calls, and ran without recording decisions. **Extrapolated, not load-tested:** about 5 minutes for 2.3M customers on one process. Command and table: [docs/BENCHMARK.md](docs/BENCHMARK.md).
 
 - **Nightly batch in BigQuery.** Rules read a flat customer twin; world rules are conditions over twin fields, so they compile to SQL over 2.3M rows. The control room's "affected N customers in seconds" is the same operation at demo size.
 - **Real-time triggers via Pub/Sub.** Salary lands, an invoice arrives, a payment is held: the event re-evaluates only that customer's rules and arbitration on Cloud Run. Arbitration is per customer and stateless, so it scales horizontally.
 - **LLM only for phrasing.** Numbers, eligibility and channel come from the engine. The LLM (Gemini, pluggable) may rephrase; the output is validated (every number must already be in the evidence) and falls back to templates.
 - **Frequency caps** (1 pushed moment per customer per week unless high stakes) keep 2.3M customers from being spammed.
 - **Feedback loop.** Not relevant and Never adjust affinity per customer and per moment type; aggregate opt-outs per rule are visible in the control room so KBC can retire a rule that annoys people.
-- **EU hosting** in Google Cloud europe-west1 (Belgium). No customer data leaves the engine; the LLM receives structured fields for one customer only.
+- **EU hosting** in Google Cloud europe-west1 (Belgium) for data residency; hosting location alone does not make a system compliant. The LLM, when used, receives structured fields for one customer only.
+- **Today vs production:** the prototype keeps state in process memory and runs as one instance (a restart resets goals, feedback, requests and added rules). Production path (proposed, not built): Cloud Run for API and workers, Firestore or Cloud SQL for customer state and requests, Pub/Sub for event-driven re-evaluation with idempotent deliveries and shared frequency caps, and BigQuery or partitioned workers for cohort computation, with the control room reading precomputed aggregates.
 
 ## Security (Aikido)
 
