@@ -294,9 +294,13 @@ export async function renderTalk(root) {
     const txt = el("p", "talk-text", r.message || "");
     m.appendChild(txt);
     if (voice.tts && voice.mod && typeof voice.mod.speak === "function" && r.message) {
-      const sp = btn(t("tk_listen"), "btn-quiet btn-sm", () => { try { voice.mod.speak(r.message); } catch (e) { console.error(e); } });
+      const sp = btn(t("tk_listen"), "btn-quiet btn-sm", () => { try { voice.mod.speak(r.message, state.lang); } catch (e) { console.error(e); } });
       sp.prepend(icon("play", 14));
       m.appendChild(sp);
+      if (voice.speakNext) {  // the question was spoken: answer out loud, like a voice assistant
+        voice.speakNext = false;
+        try { voice.mod.speak(r.message, state.lang); } catch (e) { console.error(e); }
+      }
     }
     const chart = chartNode(r.chart);
     const facts = factsNode(r.facts);
@@ -366,7 +370,8 @@ export async function renderTalk(root) {
       if (voice.stt && typeof mod.createMicButton === "function") {
         const mic = mod.createMicButton({
           lang: state.lang,
-          onTranscript(text) { if (text) { input.value = text; send(text); } },
+          // show the transcript for a quick check (amounts!) instead of sending blindly; Enter sends
+          onTranscript(text) { if (text) { input.value = text; input.focus(); voice.speakNext = true; toast(t("tk_check_transcript")); } },
           onState(s) { if (s === "error") toast(t("tk_mic_error"), "warn"); },
         });
         if (mic instanceof Node) micSlot.appendChild(mic);
